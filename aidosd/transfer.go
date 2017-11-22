@@ -269,9 +269,7 @@ var powMutex = sync.Mutex{}
 //otherwirse this calls AttachToMesh API.
 func Send(api *gadk.API, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes, error) {
 	bals := make([]Balance, len(ac.Balances))
-	for i, b := range ac.Balances {
-		bals[i] = b
-	}
+	copy(bals, ac.Balances)
 	bd, err := PrepareTransfers(api, ac, trs)
 	if err != nil {
 		ac.Balances = bals

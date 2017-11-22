@@ -204,7 +204,7 @@ func SetDB() {
 }
 
 func getPasswd() {
-	pwd, err := terminal.ReadPassword(int(syscall.Stdin))
+	pwd, err := terminal.ReadPassword(int(syscall.Stdin)) //int conversion is needed for win
 	if err != nil {
 		panic(err)
 	}
