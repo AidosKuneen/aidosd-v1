@@ -31,10 +31,11 @@ Note that
 # Reqirements
 
 * go 1.8+
-
+* gcc (for linux)
+* mingw (for windows)
 Dependencies:
 
-* adk lib in golang from Aidos Foundatoin.
+* "github.com/AidosKuneen/gadk"
 * "github.com/boltdb/bolt"
 
 
