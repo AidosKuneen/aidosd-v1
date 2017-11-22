@@ -33,8 +33,8 @@ Note that
 * go 1.8+
 * gcc (for linux)
 * mingw (for windows)
-Dependencies:
 
+Dependencies:
 * "github.com/AidosKuneen/gadk"
 * "github.com/boltdb/bolt"
 
