@@ -21,13 +21,14 @@
 package main
 
 import (
-	"aidosd/aidosd"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/AidosKuneen/aidosd/aidosd"
 )
 
 func main() {
