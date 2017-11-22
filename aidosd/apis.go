@@ -343,9 +343,9 @@ func send(acc string, conf *Conf, trs []gadk.Transfer) (gadk.Trytes, error) {
 		if acc != "" {
 			ac, err = getAccount(tx, acc)
 		} else {
-			acs, err := listAccount(tx)
-			if err != nil {
-				return err
+			acs, errr := listAccount(tx)
+			if errr != nil {
+				return errr
 			}
 			if len(acs) == 0 {
 				return errors.New("no accounts")
@@ -552,9 +552,9 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 	err = db.View(func(tx *bolt.Tx) error {
 		for _, tr := range resp.Trytes {
 			if included {
-				inc, err := api.GetLatestInclusion([]gadk.Trytes{tr.Hash()})
-				if err != nil {
-					return err
+				inc, errr := api.GetLatestInclusion([]gadk.Trytes{tr.Hash()})
+				if errr != nil {
+					return errr
 				}
 				if !inc[0] {
 					continue
