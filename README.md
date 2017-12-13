@@ -22,11 +22,8 @@ aidosd is a deamon which acts as bitcoind for adk. For now impletented APIs are 
 and `walletnotify` feature.
 
 
-Note that 
-
-* These don't have full features, these are just for a few exchange programs.
-* Error codes and error string from these commands are not same as ones in bitcoin.
-* Deposit addresses must be changed per every deposits e.g. by calling `getnewaddress`. 
+See [imcompatibility lists](https://github.com/AidosKuneen/aidosd/blob/master/imcompatility.md)
+for details about imcompatibilities with Bitcoin APIs.
 
 # Reqirements
 
