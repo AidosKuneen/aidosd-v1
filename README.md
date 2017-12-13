@@ -93,35 +93,37 @@ aidos_node = http://localhost:15555
 
 # Usage
 
-When you run `aidosd` first time, you need to input passwords to encrypt seeds in wallet.
+When you run `aidosd` first time, you need to input a password to encrypt seeds in wallet.
 
 ```
 $ ./adkd
 It seems it's the first time to run aidosd. Please enter password: <input your password> 
 ```
 
-If you run `aidosd` 2nd time or later, you need to input password to decrypt seeds.
+If you run `aidosd` 2nd time or later, you need to input the password to decrypt seeds.
 
 ```
 $ ./adkd
 Please enter password: <input your password> 
 ```
 
-Then, normally you need to `aidosd` to be deamon, so push `Ctrl-Z` to be backgound, and:
-
-```
-	$ bg
-	$ ps -ef | grep adkd
-	$ disown <process id of adkd>
-```
-
 If you forget the password, YOU CANNOT ACCESS YOUR SEED ANYMORE (i.e. you cannot use your token).
 Please remove the database in this case, i.e. remove `aidosd.db` .
+
+
+Then,`aidosd` starts to run in background.
+
+To know it is still running, run:
+
+```
+	$ ./adkd status
+```
+
+This prints the status ("running" or "stopped").
+
 
 When you want to stop:
 
 ```
-	$ kill -SIGINT <process id of adkd>
-	<wait for a few dozen of seconds>
-	$ ps -ef|grep <process id> # confirm the adkd was killed
+	$ ./adkd stop
 ```
