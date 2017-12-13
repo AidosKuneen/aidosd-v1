@@ -21,152 +21,30 @@
 package aidosd
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"sync"
-	"time"
+	"sort"
 
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
 )
 
-var privileged bool
-var mutex = sync.RWMutex{}
-
-//Balance represents balance, with change value.
-type Balance struct {
-	gadk.Balance
-	Change int64
-}
-
-//Account represents account for bitcoind api.
-type Account struct {
-	Name     string
-	Seed     gadk.Trytes `json:"-"`
-	EncSeed  []byte
-	Balances []Balance
-}
-
-func (a *Account) totalValueWithChange() int64 {
-	var t int64
-	for _, bals := range a.Balances {
-		if bals.Balance.Value > 0 {
-			t += bals.Balance.Value
-		}
-		t += bals.Change
-	}
-	return t
-}
-
-func findAddress(tx *bolt.Tx, adr gadk.Address) (*Account, int, error) {
-	b := tx.Bucket([]byte("accounts"))
-	if b == nil {
-		return nil, -1, nil
-	}
-	c := b.Cursor()
-	var result *Account
-	index := -1
-	for k, v := c.First(); k != nil; k, v = c.Next() {
-		var ac Account
-		if err := json.Unmarshal(v, &ac); err != nil {
-			return nil, -1, err
-		}
-		index = -1
-		for i, a := range ac.Balances {
-			if adr == a.Address {
-				index = i
-			}
-		}
-		if index == -1 {
-			continue
-		}
-		seed := block.decrypt(ac.EncSeed)
-		ac.Seed = gadk.Trytes(seed)
-		result = &ac
-		break
-	}
-	return result, index, nil
-}
-func listAccount(tx *bolt.Tx) ([]Account, error) {
-	var asc []Account
-	// Assume bucket exists and has keys
-	b := tx.Bucket([]byte("accounts"))
-	if b == nil {
-		return nil, nil
-	}
-	c := b.Cursor()
-	for k, v := c.First(); k != nil; k, v = c.Next() {
-		var ac Account
-		if err := json.Unmarshal(v, &ac); err != nil {
-			return nil, err
-		}
-		seed := block.decrypt(ac.EncSeed)
-		ac.Seed = gadk.Trytes(seed)
-		asc = append(asc, ac)
-	}
-
-	return asc, nil
-}
-
-func getAccount(tx *bolt.Tx, name string) (*Account, error) {
-	var ac Account
-	b := tx.Bucket([]byte("accounts"))
-	if b == nil {
-		return nil, nil
-	}
-	v := b.Get([]byte(name))
-	if v == nil {
-		return nil, nil
-	}
-	if err := json.Unmarshal(v, &ac); err != nil {
-		return nil, err
-	}
-	seed := block.decrypt(ac.EncSeed)
-	ac.Seed = gadk.Trytes(seed)
-	return &ac, nil
-}
-
-func putAccount(tx *bolt.Tx, acc *Account) error {
-	b, err := tx.CreateBucketIfNotExists([]byte("accounts"))
-	if err != nil {
-		return err
-	}
-	if acc.EncSeed == nil {
-		acc.EncSeed = block.encrypt([]byte(acc.Seed))
-	}
-	bin, err := json.Marshal(acc)
-	if err != nil {
-		return err
-	}
-	if err := b.Put([]byte(acc.Name), bin); err != nil {
-		return err
-	}
-	return nil
-}
-
-func getOneParam(req *Request) (string, error) {
-	ary, ok := req.Params.([]interface{})
-	if !ok {
-		return "", errors.New("invalid param")
-	}
-	if len(ary) != 1 {
-		return "", errors.New("invalid param")
-	}
-	acc, ok := ary[0].(string)
-	if !ok {
-		return "", errors.New("invalid param")
-	}
-	return acc, nil
-}
-
 func getnewaddress(conf *Conf, req *Request, res *Response) error {
-	acc, err := getOneParam(req)
-	if err != nil {
-		return err
+	data, ok := req.Params.([]interface{})
+	if !ok {
+		return errors.New("invalid params")
+	}
+	acc := ""
+	switch len(data) {
+	case 1:
+		acc, ok = data[0].(string)
+		if !ok {
+			return errors.New("invalid txid")
+		}
+	case 0:
+	default:
+		return errors.New("invalid params")
 	}
 	return db.Update(func(tx *bolt.Tx) error {
 		ac, err := getAccount(tx, acc)
@@ -192,11 +70,9 @@ func getnewaddress(conf *Conf, req *Request, res *Response) error {
 		return putAccount(tx, ac)
 	})
 }
-func getBalance(node string, tx *bolt.Tx) ([]Account, gadk.Balances, error) {
-	api := gadk.NewAPI(node, nil)
+func getBalance(api apis, tx *bolt.Tx) ([]Account, map[gadk.Address]int64, error) {
 	acs, err := listAccount(tx)
 	if err != nil {
-		log.Print(err)
 		return nil, nil, err
 	}
 	var address []gadk.Address
@@ -206,22 +82,21 @@ func getBalance(node string, tx *bolt.Tx) ([]Account, gadk.Balances, error) {
 		}
 	}
 	bals, err := api.Balances(address)
-	return acs, bals, err
+	balmap := make(map[gadk.Address]int64)
+	for _, b := range bals {
+		balmap[b.Address] = b.Value
+	}
+	return acs, balmap, err
 }
 func listaddressgroupings(conf *Conf, req *Request, res *Response) error {
 	var result [][][]interface{}
+	var r0 [][]interface{}
 	err := db.View(func(tx *bolt.Tx) error {
-		acs, bals, err := getBalance(conf.Node, tx)
+		acs, balmap, err := getBalance(conf.api, tx)
 		if err != nil {
-			log.Print(err)
 			return err
 		}
-		balmap := make(map[gadk.Address]int64)
-		for _, b := range bals {
-			balmap[b.Address] = b.Value
-		}
 		for _, ac := range acs {
-			var r0 [][]interface{}
 			for _, b := range ac.Balances {
 				r1 := make([]interface{}, 3)
 				r1[0] = b.Address.WithChecksum()
@@ -232,22 +107,61 @@ func listaddressgroupings(conf *Conf, req *Request, res *Response) error {
 				r1[2] = ac.Name
 				r0 = append(r0, r1)
 			}
-			result = append(result, r0)
 		}
 		return nil
 	})
+	result = append(result, r0)
 	res.Result = result
 	return err
 }
 func getbalance(conf *Conf, req *Request, res *Response) error {
+	data, ok := req.Params.([]interface{})
+	if !ok {
+		return errors.New("param must be slice")
+	}
+	adrstr := "*"
+	switch len(data) {
+	case 3:
+		fallthrough
+	case 2:
+		n, ok := data[1].(float64)
+		if !ok {
+			return errors.New("invalid number")
+		}
+		if n == 0 {
+			return errors.New("not support unconfirmed transactions")
+		}
+		fallthrough
+	case 1:
+		adrstr, ok = data[0].(string)
+		if !ok {
+			return errors.New("invalid address")
+		}
+	case 0:
+	default:
+		return errors.New("invalid params")
+	}
+
 	err := db.View(func(tx *bolt.Tx) error {
-		_, bals, err := getBalance(conf.Node, tx)
+		acc, balmap, err := getBalance(conf.api, tx)
 		if err != nil {
 			return err
 		}
 		var total int64
-		for _, b := range bals {
-			total += b.Value
+		if adrstr == "*" {
+			for _, v := range balmap {
+				total += v
+			}
+		} else {
+			var bal []Balance
+			for _, a := range acc {
+				if adrstr == a.Name {
+					bal = a.Balances
+				}
+			}
+			for _, b := range bal {
+				total += balmap[b.Address]
+			}
 		}
 		ftotal := float64(total) / 100000000
 		res.Result = ftotal
@@ -256,8 +170,19 @@ func getbalance(conf *Conf, req *Request, res *Response) error {
 	return err
 }
 func listaccounts(conf *Conf, req *Request, res *Response) error {
-	api := gadk.NewAPI(conf.Node, nil)
-	var addresses []gadk.Address
+	ary, ok := req.Params.([]interface{})
+	if !ok {
+		return errors.New("invalid param")
+	}
+	if len(ary) > 0 {
+		conf, ok := ary[0].(float64)
+		if !ok {
+			return errors.New("invalid param")
+		}
+		if conf == 0 {
+			return errors.New("not support unconfirmed transacton")
+		}
+	}
 	result := make(map[string]float64)
 	err := db.View(func(tx *bolt.Tx) error {
 		acs, err := listAccount(tx)
@@ -265,10 +190,11 @@ func listaccounts(conf *Conf, req *Request, res *Response) error {
 			return err
 		}
 		for _, ac := range acs {
+			var addresses []gadk.Address
 			for _, b := range ac.Balances {
 				addresses = append(addresses, b.Address)
 			}
-			bals, err := api.Balances(addresses)
+			bals, err := conf.api.Balances(addresses)
 			if err != nil {
 				return err
 			}
@@ -284,22 +210,30 @@ func listaccounts(conf *Conf, req *Request, res *Response) error {
 	return err
 }
 
+type info struct {
+	IsValid      bool    `json:"isvalid"`
+	Address      string  `json:"address"`
+	ScriptPubKey string  `json:"scriptPubkey"`
+	IsMine       bool    `json:"ismine"`
+	IsWatchOnly  *bool   `json:"iswatchonly,omitempty"`
+	IsScript     *bool   `json:"isscript,omitempty"`
+	Pubkey       *string `json:"pubkey,omitempty"`
+	IsCompressed *bool   `json:"iscompressed,omitempty"`
+	Account      *string `json:"account,omitempty"`
+}
+
 //only 'isvalid' params is valid, others may be incorrect.
 func validateaddress(conf *Conf, req *Request, res *Response) error {
-	type Info struct {
-		IsValid      bool    `json:"isvalid"`
-		Address      string  `json:"address"`
-		ScriptPubKey string  `json:"scriptPubkey"`
-		IsMine       bool    `json:"ismine"`
-		IsWatchOnly  bool    `json:"iswatchonly"`
-		IsScript     bool    `json:"isscript"`
-		Pubkey       string  `json:"pubkey"`
-		IsCompressed bool    `json:"iscompressed"`
-		Account      *string `json:"account,omitempty"`
+	data, ok := req.Params.([]interface{})
+	if !ok {
+		return errors.New("invalid params")
 	}
-	adrstr, err := getOneParam(req)
-	if err != nil {
-		return err
+	if len(data) != 1 {
+		return errors.New("length of param must be 1")
+	}
+	adrstr, ok := data[0].(string)
+	if !ok {
+		return errors.New("invalid address")
 	}
 	valid := false
 	adr, err := gadk.ToAddress(adrstr)
@@ -312,14 +246,20 @@ func validateaddress(conf *Conf, req *Request, res *Response) error {
 		return err
 	})
 
-	info := Info{
+	info := info{
 		IsValid: valid,
 		Address: adrstr,
 		IsMine:  false,
 	}
+	t := false
+	empty := ""
 	if ac != nil {
 		info.IsMine = true
 		info.Account = &ac.Name
+		info.IsWatchOnly = &t
+		info.IsScript = &t
+		info.Pubkey = &empty
+		info.IsCompressed = &t
 	}
 	res.Result = &info
 	return nil
@@ -330,256 +270,90 @@ func settxfee(conf *Conf, req *Request, res *Response) error {
 	return nil
 }
 
-func send(acc string, conf *Conf, trs []gadk.Transfer) (gadk.Trytes, error) {
-	var mwm int64 = 18
-	if conf.Testnet {
-		mwm = 15
-	}
-	api := gadk.NewAPI(conf.Node, nil)
-	var result gadk.Trytes
-	err := db.Update(func(tx *bolt.Tx) error {
-		var ac *Account
-		var err error
-		if acc != "" {
-			ac, err = getAccount(tx, acc)
-		} else {
-			acs, errr := listAccount(tx)
-			if errr != nil {
-				return errr
-			}
-			if len(acs) == 0 {
-				return errors.New("no accounts")
-			}
-			ac = &acs[0]
-		}
-		if err != nil {
-			return err
-		}
-		if ac == nil {
-			return errors.New("accout not found")
-		}
-		bhash, err := Send(api, ac, mwm, trs)
-		if err == nil {
-			if errr := putAccount(tx, ac); errr != nil {
-				return errr
-			}
-			result = bhash
-		}
-		return err
-	})
-	return result, err
-}
-
-func sendmany(conf *Conf, req *Request, res *Response) error {
-	mutex.RLock()
-	if !privileged {
-		mutex.RUnlock()
-		return errors.New("not priviledged")
-	}
-	mutex.RUnlock()
-	data, ok := req.Params.([]interface{})
-	if !ok {
-		return errors.New("invalid params")
-	}
-	if len(data) < 2 {
-		return errors.New("invalid param length")
-	}
-	acc, ok := data[0].(string)
-	if !ok {
-		return errors.New("invalid account")
-	}
-	var target map[string]float64
-	targetstr, ok := data[1].(string)
-	if !ok {
-		t, err := json.Marshal(data[1])
-		if err != nil {
-			return err
-		}
-		targetstr = string(t)
-	}
-	if err := json.Unmarshal([]byte(targetstr), &target); err != nil {
-		return err
-	}
-	trs := make([]gadk.Transfer, len(target))
-	i := 0
-	var err error
-	for k, v := range target {
-		trs[i].Address, err = gadk.ToAddress(k)
-		if err != nil {
-			return err
-		}
-		trs[i].Value = int64(v * 100000000)
-		trs[i].Tag = "AIDOSMARKET9A99999999999999"
-		i++
-	}
-	res.Result, err = send(acc, conf, trs)
-	return err
-}
-
-func sendfrom(conf *Conf, req *Request, res *Response) error {
-	var err error
-	mutex.RLock()
-	if !privileged {
-		mutex.RUnlock()
-		return errors.New("not priviledged")
-	}
-	mutex.RUnlock()
-	data, ok := req.Params.([]interface{})
-	if !ok {
-		return errors.New("invalid params")
-	}
-	if len(data) < 3 {
-		return errors.New("invalid params")
-	}
-	acc, ok := data[0].(string)
-	if !ok {
-		return errors.New("invalid account")
-	}
-	var tr gadk.Transfer
-	tr.Tag = "AIDOSMARKET9B99999999999999"
-	adrstr, ok := data[1].(string)
-	if !ok {
-		return errors.New("invalid address")
-	}
-	tr.Address, err = gadk.ToAddress(adrstr)
-	if err != nil {
-		return err
-	}
-	value, ok := data[2].(float64)
-	if !ok {
-		return errors.New("invalid value")
-	}
-	tr.Value = int64(value * 100000000)
-	res.Result, err = send(acc, conf, []gadk.Transfer{tr})
-	return err
-}
-func sendtoaddress(conf *Conf, req *Request, res *Response) error {
-	var err error
-	mutex.RLock()
-	if !privileged {
-		mutex.RUnlock()
-		return errors.New("not priviledged")
-	}
-	mutex.RUnlock()
-	var tr gadk.Transfer
-	tr.Tag = "AIDOSMARKET9C99999999999999"
-	data, ok := req.Params.([]interface{})
-	if !ok {
-		return errors.New("invalid params")
-	}
-	if len(data) != 2 {
-		return errors.New("invalid params")
-	}
-	adrstr, ok := data[0].(string)
-	if !ok {
-		return errors.New("invalid address")
-	}
-	tr.Address, err = gadk.ToAddress(adrstr)
-	if err != nil {
-		return err
-	}
-	value, ok := data[1].(float64)
-	if !ok {
-		return errors.New("invalid value")
-	}
-	tr.Value = int64(value * 100000000)
-	res.Result, err = send("", conf, []gadk.Transfer{tr})
-	return err
-}
-
 type details struct {
-	Account  string      `json:"account"`
-	Address  gadk.Trytes `json:"address"`
-	Category string      `json:"category"`
-	Amount   float64     `json:"amount"`
-	Vout     int64       `json:"vout"`
-	Fee      float64     `json:"fee"`
-	Txid     gadk.Trytes `json:"txid,omitempty"`
+	Account   string      `json:"account"`
+	Address   gadk.Trytes `json:"address"`
+	Category  string      `json:"category"`
+	Amount    float64     `json:"amount"`
+	Vout      int64       `json:"vout"`
+	Fee       float64     `json:"fee"`
+	Abandoned *bool       `json:"abandoned,omitempty"`
 }
 
 type tx struct {
-	Amount          float64     `json:"amount"`
-	Fee             float64     `json:"fee"`
-	Confirmations   int         `json:"confirmations"`
-	Blockhash       string      `json:"blockhash"`
-	Blockindex      int64       `json:"blockindex"`
-	Blocktime       int64       `json:"blocktime"`
-	Txid            gadk.Trytes `json:"txid"`
-	Walletconflicts []string    `json:"walletconflicts"`
-	Time            int64       `json:"time"`
-	TimeReceived    int64       `json:"timereceived"`
-	Details         []*details  `json:"details"`
-	Hex             string      `json:"hex"`
+	Amount            float64     `json:"amount"`
+	Fee               float64     `json:"fee"`
+	Confirmations     int         `json:"confirmations"`
+	Blockhash         *string     `json:"blockhash,omitempty"`
+	Blockindex        *int64      `json:"blockindex,omitempty"`
+	Blocktime         *int64      `json:"blocktime,omitempty"`
+	Txid              gadk.Trytes `json:"txid"`
+	Walletconflicts   []string    `json:"walletconflicts"`
+	Time              int64       `json:"time"`
+	TimeReceived      int64       `json:"timereceived"`
+	BIP125Replaceable string      `json:"bip125-replaceable"`
+	Details           []*details  `json:"details"`
+	Hex               string      `json:"hex"`
 }
 
 func gettransaction(conf *Conf, req *Request, res *Response) error {
-	bundlestr, err := getOneParam(req)
-	if err != nil {
-		return err
+	data, ok := req.Params.([]interface{})
+	if !ok {
+		return errors.New("invalid params")
+	}
+	bundlestr := ""
+	switch len(data) {
+	case 2:
+	case 1:
+		bundlestr, ok = data[0].(string)
+		if !ok {
+			return errors.New("invalid txid")
+		}
+	default:
+		return errors.New("invalid params")
 	}
 	bundle := gadk.Trytes(bundlestr)
 	ft := gadk.FindTransactionsRequest{
 		Bundles: []gadk.Trytes{bundle},
 	}
-	api := gadk.NewAPI(conf.Node, nil)
-	r, err := api.FindTransactions(&ft)
+	r, err := conf.api.FindTransactions(&ft)
 	if err != nil {
 		return err
 	}
 	if len(r.Hashes) == 0 {
 		return errors.New("bundle not found")
 	}
-	resp, err := api.GetTrytes(r.Hashes)
+	resp, err := conf.api.GetTrytes(r.Hashes)
 	if err != nil {
 		return err
 	}
 	if len(resp.Trytes) != len(r.Hashes) {
 		return fmt.Errorf("cannot get all txs %d/%d", len(r.Hashes), len(resp.Trytes))
 	}
-	inc, err := api.GetLatestInclusion(r.Hashes)
-	if err != nil {
-		return err
-	}
-	included := false
-	for _, i := range inc {
-		if i {
-			included = true
-			break
-		}
-	}
+
 	detailss := make([]*details, 0, len(r.Hashes))
 	var amount int64
+	nconf := 0
+	var dt *transaction
 	err = db.View(func(tx *bolt.Tx) error {
 		for _, tr := range resp.Trytes {
-			if included {
-				inc, errr := api.GetLatestInclusion([]gadk.Trytes{tr.Hash()})
-				if errr != nil {
-					return errr
-				}
-				if !inc[0] {
-					continue
-				}
-			}
-			if tr.Value == 0 {
-				continue
-			}
-			ac, _, errr := findAddress(tx, tr.Address)
+			dt2, errr := getTransaction(tx, conf, &tr)
 			if errr != nil {
-				return errr
+				return err
 			}
-			if ac == nil {
+			if dt2.Amount == 0 || dt2.Account == nil {
 				continue
 			}
+			dt = dt2
 			d := &details{
-				Account:  ac.Name,
-				Address:  tr.Address.WithChecksum(),
-				Amount:   float64(tr.Value) / 100000000,
-				Category: "send",
+				Account:   *dt.Account,
+				Address:   dt.Address,
+				Category:  dt.Category,
+				Amount:    dt.Amount,
+				Abandoned: dt.Abandoned,
 			}
+			nconf = dt.Confirmations
 			amount += tr.Value
-			if tr.Value > 0 {
-				d.Category = "receive"
-			}
 			detailss = append(detailss, d)
 		}
 		return nil
@@ -587,46 +361,83 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 	if err != nil {
 		return err
 	}
-	nconf := 0
-	if included {
-		nconf = 100000
-	}
-	t := resp.Trytes[0].Timestamp.Unix()
 	res.Result = &tx{
-		Amount:          float64(amount) / 100000000,
-		Confirmations:   nconf,
-		Time:            t,
-		TimeReceived:    t,
-		Details:         detailss,
-		Walletconflicts: []string{},
-		Txid:            bundle,
+		Amount:            float64(amount) / 100000000,
+		Confirmations:     nconf,
+		Blocktime:         dt.Blocktime,
+		Blockhash:         dt.Blockhash,
+		Blockindex:        dt.Blockindex,
+		Txid:              bundle,
+		Walletconflicts:   []string{},
+		Time:              dt.Time,
+		TimeReceived:      dt.TimeReceived,
+		BIP125Replaceable: "no",
+		Details:           detailss,
 	}
 	return nil
 }
 
+type transaction struct {
+	Account  *string     `json:"account"`
+	Address  gadk.Trytes `json:"address"`
+	Category string      `json:"category"`
+	Amount   float64     `json:"amount"`
+	// Label             string      `json:"label"`
+	Vout          int64   `json:"vout"`
+	Fee           float64 `json:"fee"`
+	Confirmations int     `json:"confirmations"`
+	Trusted       *bool   `json:"trusted,omitempty"`
+	// Generated         bool        `json:"generated"`
+	Blockhash       *string     `json:"blockhash,omitempty"`
+	Blockindex      *int64      `json:"blockindex,omitempty"`
+	Blocktime       *int64      `json:"blocktime,omitempty"`
+	Txid            gadk.Trytes `json:"txid"`
+	Walletconflicts []string    `json:"walletconflicts"`
+	Time            int64       `json:"time"`
+	TimeReceived    int64       `json:"timereceived"`
+	// Comment           string      `json:"string"`
+	// To                string `json:"to"`
+	// Otheraccount      string `json:"otheraccount"`
+	BIP125Replaceable string `json:"bip125-replaceable"`
+	Abandoned         *bool  `json:"abandoned,omitempty"`
+}
+
 //dont supprt over 1000 txs.
 func listtransactions(conf *Conf, req *Request, res *Response) error {
-	api := gadk.NewAPI(conf.Node, nil)
 	data, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("invalid params")
 	}
-	if len(data) != 2 {
+	acc := "*"
+	num := 10
+	skip := 0
+	switch len(data) {
+	case 4:
+		fallthrough
+	case 3:
+		n, ok := data[2].(float64)
+		if !ok {
+			return errors.New("invalid number")
+		}
+		skip = int(n)
+		fallthrough
+	case 2:
+		n, ok := data[1].(float64)
+		if !ok {
+			return errors.New("invalid number")
+		}
+		num = int(n)
+		fallthrough
+	case 1:
+		acc, ok = data[0].(string)
+		if !ok {
+			return errors.New("invalid account")
+		}
+	case 0:
+	default:
 		return errors.New("invalid params")
 	}
-	adrstr, ok := data[0].(string)
-	if !ok {
-		return errors.New("invalid address")
-	}
-	if adrstr != "*" {
-		return errors.New("address must be *")
-	}
-	n, ok := data[1].(float64)
-	if !ok {
-		return errors.New("invalid number")
-	}
-	num := int(n)
-	var ltx []*details
+	var ltx []*transaction
 	err := db.View(func(tx *bolt.Tx) error {
 		var hs []*txstate
 		b := tx.Bucket([]byte("hashes"))
@@ -641,75 +452,76 @@ func listtransactions(conf *Conf, req *Request, res *Response) error {
 		for i := 0; i < len(hs); i++ {
 			txs[i] = hs[len(hs)-1-i].Hash
 		}
-		resp, err := api.GetTrytes(txs)
+		resp, err := conf.api.GetTrytes(txs)
 		if err != nil {
 			return err
 		}
-		ltx = make([]*details, 0, len(txs))
-		for _, tr := range resp.Trytes {
-			if tr.Value == 0 {
+		sort.Slice(resp.Trytes, func(i, j int) bool {
+			return !resp.Trytes[i].Timestamp.Before(resp.Trytes[j].Timestamp)
+		})
+		ltx = make([]*transaction, 0, num)
+		index := 0
+		for i := 0; i < len(resp.Trytes) && len(ltx) < num; i++ {
+			tr := resp.Trytes[i]
+			dt, err := getTransaction(tx, conf, &tr)
+			if err != nil {
+				return err
+			}
+			if dt.Amount == 0 {
 				continue
 			}
-			ac, _, errr := findAddress(tx, tr.Address)
-			if errr != nil {
-				return errr
-			}
-			if ac == nil {
+
+			if acc != "*" && *dt.Account != acc {
 				continue
 			}
-			dt := &details{
-				Txid:     tr.Bundle,
-				Address:  tr.Address.WithChecksum(),
-				Amount:   float64(tr.Value) / 100000000,
-				Category: "send",
-			}
-			if tr.Value > 0 {
-				dt.Category = "receive"
+			if index++; index-1 < skip {
+				continue
 			}
 			ltx = append(ltx, dt)
-			if len(ltx) >= num {
-				return nil
-			}
 		}
 		return nil
 	})
 	res.Result = ltx
 	return err
 }
-func walletpassphrase(conf *Conf, req *Request, res *Response) error {
-	mutex.RLock()
-	if privileged {
-		mutex.RUnlock()
-		return nil
+
+func getTransaction(tx *bolt.Tx, conf *Conf, tr *gadk.Transaction) (*transaction, error) {
+	ac, _, errr := findAddress(tx, tr.Address)
+	if errr != nil {
+		return nil, errr
 	}
-	mutex.RUnlock()
-	data, ok := req.Params.([]interface{})
-	if !ok {
-		return errors.New("invalid params")
+	inc, err := conf.api.GetLatestInclusion([]gadk.Trytes{tr.Hash()})
+	if err != nil {
+		return nil, err
 	}
-	if len(data) < 2 {
-		return errors.New("invalid param length")
+	f := false
+	emp := ""
+	var zero int64
+	dt := &transaction{
+		Address:           tr.Address.WithChecksum(),
+		Category:          "send",
+		Amount:            float64(tr.Value) / 100000000,
+		Txid:              tr.Bundle,
+		Walletconflicts:   []string{},
+		Time:              tr.Timestamp.Unix(),
+		TimeReceived:      tr.Timestamp.Unix(),
+		BIP125Replaceable: "no",
+		Abandoned:         &f,
 	}
-	pwd, ok := data[0].(string)
-	if !ok {
-		return errors.New("invalid password")
+	if ac != nil {
+		dt.Account = &ac.Name
 	}
-	sec, ok := data[1].(float64)
-	if !ok {
-		return errors.New("invalid time")
+	if inc[0] {
+		dt.Blockhash = &emp
+		dt.Blocktime = &dt.Time
+		dt.Blockindex = &zero
+		dt.Confirmations = 100000
+	} else {
+		dt.Trusted = &f
 	}
-	sum := sha256.Sum256([]byte(pwd))
-	if !bytes.Equal(sum[:], block.pwd256) {
-		return errors.New("invalid password")
+	if tr.Value > 0 {
+		dt.Category = "receive"
+		dt.Abandoned = nil
 	}
-	go func() {
-		mutex.Lock()
-		privileged = true
-		mutex.Unlock()
-		time.Sleep(time.Second * time.Duration(sec))
-		mutex.Lock()
-		privileged = false
-		mutex.Unlock()
-	}()
-	return nil
+	return dt, nil
 }

@@ -21,11 +21,6 @@
 package aidosd
 
 import (
-	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,58 +29,28 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
-	shellwords "github.com/mattn/go-shellwords"
 	"github.com/natefinch/lumberjack"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var db *bolt.DB
-var passPhrase = []byte("AidosKuneen")
-var block *aesCrypto
 
-type aesCrypto struct {
-	block  cipher.Block
-	pwd256 []byte
-}
-
-func newAESCrpto(pwd []byte) (*aesCrypto, error) {
-	pwd2 := sha256.Sum256(pwd)
-	pwd256 := pwd2[:]
-	block, err := aes.NewCipher(pwd256)
-	if err != nil {
-		return nil, err
-	}
-	return &aesCrypto{
-		block:  block,
-		pwd256: pwd256,
-	}, nil
-}
-
-func (a *aesCrypto) encrypt(pt []byte) []byte {
-	ct := make([]byte, aes.BlockSize+len(pt))
-	iv := ct[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic(err)
-	}
-	encryptStream := cipher.NewCTR(a.block, iv)
-	encryptStream.XORKeyStream(ct[aes.BlockSize:], pt)
-	return ct
-}
-
-func (a *aesCrypto) decrypt(ct []byte) []byte {
-	pt := make([]byte, len(ct[aes.BlockSize:]))
-	decryptStream := cipher.NewCTR(a.block, ct[:aes.BlockSize])
-	decryptStream.XORKeyStream(pt, ct[aes.BlockSize:])
-	return pt
+type apis interface {
+	FindTransactions(ft *gadk.FindTransactionsRequest) (*gadk.FindTransactionsResponse, error)
+	GetTrytes(hashes []gadk.Trytes) (*gadk.GetTrytesResponse, error)
+	Balances(adr []gadk.Address) (gadk.Balances, error)
+	GetTransactionsToApprove(depth int64) (*gadk.GetTransactionsToApproveResponse, error)
+	BroadcastTransactions(trytes []gadk.Transaction) error
+	StoreTransactions(trytes []gadk.Transaction) error
+	GetLatestInclusion(hash []gadk.Trytes) ([]bool, error)
 }
 
 //Conf is configuration for aidosd.
@@ -97,16 +62,17 @@ type Conf struct {
 	Node        string
 	Testnet     bool
 	PassPhrase  bool
+	api         apis
 }
 
 //ParseConf parses conf file.
-func ParseConf() *Conf {
+func parseConf(cfile string) *Conf {
 	conf := Conf{
 		RPCPort:    "8332",
 		PassPhrase: true,
 	}
 
-	f, err := os.Open("aidosd.conf")
+	f, err := os.Open(cfile)
 	if err != nil {
 		panic(err)
 	}
@@ -163,6 +129,7 @@ func ParseConf() *Conf {
 			log.Println(states[0] + " is ignored.")
 		}
 	}
+	conf.api = gadk.NewAPI(conf.Node, nil)
 	return &conf
 }
 
@@ -185,7 +152,7 @@ func SetLog(verbose bool) {
 }
 
 //SetDB setup db.
-func SetDB() {
+func setDB() {
 	var err error
 	db, err = bolt.Open("aidosd.db", 0600, nil)
 	if err != nil {
@@ -195,57 +162,20 @@ func SetDB() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		fmt.Println("exiting...")
-		if err := db.Close(); err != nil {
-			log.Println(err)
-		}
-		os.Exit(1)
+		Exit()
 	}()
 }
 
-func getPasswd() {
-	pwd, err := terminal.ReadPassword(int(syscall.Stdin)) //int conversion is needed for win
-	if err != nil {
-		panic(err)
+//Exit flushs DB and exit.
+func Exit() {
+	fmt.Println("exiting...")
+	if err := db.Close(); err != nil {
+		log.Println(err)
 	}
-	block, err = newAESCrpto(pwd)
-	if err != nil {
-		panic(err)
-	}
-}
-
-//Password reads passowrd fron stdin and save password.
-func Password() {
-	err := db.Update(func(tx *bolt.Tx) error {
-		var err error
-		b := tx.Bucket([]byte("pass_phrase"))
-		if b == nil {
-			fmt.Print("It seems it's the first time to run aidosd. Please enter password: ")
-			getPasswd()
-			fmt.Println("")
-			cipherText := block.encrypt(passPhrase)
-			b, err = tx.CreateBucket([]byte("pass_phrase"))
-			if err != nil {
-				return err
-			}
-			if err := b.Put([]byte("pass_phrase"), cipherText); err != nil {
-				return err
-			}
-			return nil
-		}
-		fmt.Print("Please enter password: ")
-		getPasswd()
-		fmt.Println("")
-		ct := b.Get([]byte("pass_phrase"))
-		pt := block.decrypt(ct)
-		if !bytes.Equal(passPhrase, pt) {
-			return errors.New("incorrect password")
-		}
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
+	go func() {
+		time.Sleep(3 * time.Second)
+		os.Exit(1)
+	}()
 }
 
 //Request is for parsing request from client.
@@ -314,20 +244,20 @@ func Handle(conf *Conf, w http.ResponseWriter, r *http.Request) {
 		err = validateaddress(conf, &req, &res)
 	case "settxfee":
 		err = settxfee(conf, &req, &res)
+	case "gettransaction":
+		err = gettransaction(conf, &req, &res)
+	case "getbalance":
+		err = getbalance(conf, &req, &res)
+	case "listtransactions":
+		err = listtransactions(conf, &req, &res)
 	case "walletpassphrase":
 		err = walletpassphrase(conf, &req, &res)
 	case "sendmany":
 		err = sendmany(conf, &req, &res)
 	case "sendfrom":
 		err = sendfrom(conf, &req, &res)
-	case "gettransaction":
-		err = gettransaction(conf, &req, &res)
-	case "getbalance":
-		err = getbalance(conf, &req, &res)
 	case "sendtoaddress":
 		err = sendtoaddress(conf, &req, &res)
-	case "listtransactions":
-		err = listtransactions(conf, &req, &res)
 	default:
 		err = errors.New(req.Method + " not supperted")
 	}
@@ -347,179 +277,15 @@ func Handle(conf *Conf, w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type txstate struct {
-	Hash      gadk.Trytes
-	Confirmed bool
-}
+//Prepare prepares aidosd.
+func Prepare(cfile string, passwd []byte) (*Conf, error) {
+	setDB()
+	if err := password(passwd); err != nil {
+		fmt.Println(err)
+		Exit()
+		return nil, err
+	}
+	conf := parseConf(cfile)
 
-func compareHashes(api *gadk.API, tx *bolt.Tx, hashes []gadk.Trytes) ([]gadk.Trytes, []gadk.Trytes, error) {
-	var hs []*txstate
-	var news []*txstate
-	var confirmed []gadk.Trytes
-	//search new tx
-	b := tx.Bucket([]byte("hashes"))
-	if b != nil {
-		v := b.Get([]byte("hashes"))
-		if v != nil {
-			if err := json.Unmarshal(v, &hs); err != nil {
-				return nil, nil, err
-			}
-		}
-	}
-	news = make([]*txstate, 0, len(hashes))
-	for _, h1 := range hashes {
-		exist := false
-		for _, h2 := range hs {
-			if h1 == h2.Hash {
-				exist = true
-				break
-			}
-		}
-		if !exist {
-			news = append(news, &txstate{Hash: h1})
-		}
-	}
-	//search newly confirmed tx
-	confirmed = make([]gadk.Trytes, 0, len(hs))
-	hs = append(hs, news...)
-	for _, h := range hs {
-		if h.Confirmed {
-			continue
-		}
-		inc, err := api.GetLatestInclusion([]gadk.Trytes{h.Hash})
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(inc) > 0 && inc[0] {
-			confirmed = append(confirmed, h.Hash)
-			h.Confirmed = true
-		}
-	}
-	//save txs
-	b, err := tx.CreateBucketIfNotExists([]byte("hashes"))
-	if err != nil {
-		return nil, nil, err
-	}
-	bin, err := json.Marshal(hs)
-	if err != nil {
-		return nil, nil, err
-	}
-	if err = b.Put([]byte("hashes"), bin); err != nil {
-		return nil, nil, err
-	}
-
-	ret := make([]gadk.Trytes, len(news))
-	for i := range news {
-		ret[i] = news[i].Hash
-	}
-	return ret, confirmed, nil
-}
-
-//Walletnotify exec walletnotify scripts when receivng tx and tx is confirmed.
-func Walletnotify(conf *Conf) error {
-	log.Println("starting walletnotify...")
-	api := gadk.NewAPI(conf.Node, nil)
-	bdls := make(map[gadk.Trytes]struct{})
-	err := db.Update(func(tx *bolt.Tx) error {
-		//get all addresses
-		var adrs []gadk.Address
-		acc, err := listAccount(tx)
-		if err != nil {
-			return err
-		}
-		if len(acc) == 0 {
-			return nil
-		}
-		for _, ac := range acc {
-			for _, b := range ac.Balances {
-				adrs = append(adrs, b.Address)
-			}
-		}
-		//get all trytes for all addresses
-		ft := gadk.FindTransactionsRequest{
-			Addresses: adrs,
-		}
-		r, err := api.FindTransactions(&ft)
-		if err != nil {
-			return err
-		}
-		if len(r.Hashes) == 0 {
-			log.Println("no tx for addresses in wallet")
-			return nil
-		}
-		//get newly added and newly confirmed trytes.
-		news, confirmed, err := compareHashes(api, tx, r.Hashes)
-		if err != nil {
-			return err
-		}
-		if len(news)+len(confirmed) == 0 {
-			log.Println("no tx to be handled")
-			return nil
-		}
-		//add balances for all newly confirmed tx..
-		resp, err := api.GetTrytes(confirmed)
-		if err != nil {
-			return err
-		}
-		for _, tr := range resp.Trytes {
-			if tr.Value <= 0 {
-				continue
-			}
-			acc, index, errr := findAddress(tx, tr.Address)
-			if errr != nil {
-				log.Println(errr)
-				continue
-			}
-			if acc == nil {
-				log.Println("acc shoud not be null")
-				continue
-			}
-			acc.Balances[index].Value += tr.Value
-			acc.Balances[index].Change = 0
-			if errrr := putAccount(tx, acc); err != nil {
-				return errrr
-			}
-		}
-		//add bundle hash to bdls.
-		nresp, err := api.GetTrytes(news)
-		if err != nil {
-			return err
-		}
-		for _, tr := range nresp.Trytes {
-			if tr.Value != 0 {
-				bdls[tr.Bundle] = struct{}{}
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	//exec cmds for all new txs. %s will be the bundle hash.
-	if conf.Notify == "" {
-		return nil
-	}
-	for bdl := range bdls {
-		cmd := strings.Replace(conf.Notify, "%s", string(bdl), -1)
-		args, err := shellwords.Parse(cmd)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		var out []byte
-		if len(args) == 1 {
-			out, err = exec.Command(args[0]).Output()
-		} else {
-			out, err = exec.Command(args[0], args[1:]...).Output()
-		}
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		delete(bdls, bdl)
-		log.Println("executed ", cmd, ",output:", string(out))
-	}
-	log.Println("end of walletnotify")
-	return nil
+	return conf, nil
 }
