@@ -9,7 +9,10 @@
 * Confirmations in ADK are regarded as "finalized", so all parameter for
  number of comfirmations  are ignored.
 
-## `getnewaddress`
+## Details for Each APIs
+
+
+### `getnewaddress`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -20,7 +23,7 @@
 | result      | ---| 
 
 
-## `listaccounts`
+### `listaccounts`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -32,7 +35,7 @@
 | result      | ---| 
 | →Account : Balance     | ---| 
 
-## `listaddressgroupings`
+### `listaddressgroupings`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -48,7 +51,7 @@
 | → → →Balance      | ---|
 | → → →Account      | ---|
 
-## `validateaddress`
+### `validateaddress`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -75,7 +78,7 @@
 |   →hdmasterkeyid 	    |always doesn't exist|
 
 
-##  `settxfee`
+###  `settxfee`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -85,7 +88,7 @@
 | ------------- |------------- |
 | result      | always true| 
 
-##  `walletpassphrase`
+###  `walletpassphrase`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -96,7 +99,7 @@
 | ------------- |------------- |
 | result      | ---| 
 
-##  `sendmany`
+###  `sendmany`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -112,7 +115,7 @@
 | ------------- |------------- |
 | result      | ---| 
 
-##  `sendfrom`
+###  `sendfrom`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -127,18 +130,44 @@
 | ------------- |------------- |
 | result      | None| 
 
-##  `gettransaction`
+###  `gettransaction`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
 | TXID      | bundle hash| 
 | Include Watch-Only      | ignored| 
 
+
 | Result   | Incompatibility Note  |
 | ------------- |------------- |
-| result      | ---| 
+| result      | ---|  
+| →amount 	     | ---|  
+| →fee       | always 0|  
+|→confirmations       | 0 if not confirmed, 100000 if confirmed|  
+| →generated       |always doesn't exist|  
+| →blockhash      | exists and empty string if confirmed|  
+| →blockindex       |0 and empty string if confirmed|  
+| →blocktime      | exists and same as the transaction timestamp if confirmed| 
+|→txid        | bundle hash|  
+| →walletconflicts       | always empty array|  
+|  → →TXID      | always doesn't exist|  
+|  →time      | same as thye transaction timestamp|  
+| →timereceived       | same as thye transaction timestamp|  
+| →bip125-replaceable      | always "no"|  
+|  →comment      | always doesn't exists)|
+| →to      | always doesn't exists|
+| →details      | ---|
+| → →involvesWatchonly       | always doesn't exists|  
+| → →account       | ---|  
+|  → →address      | ---|  
+|  → →category      | always "send" or "receive" |  
+| →→amount 	     | ---|  
+| → →vout       | always 0|  
+| →→fee       | always 0|  
+| → →abandoned       | exists and false if category is "send"|  
+| → →hex       | always empty string|  
 
-##  `getbalance`
+###  `getbalance`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -150,7 +179,7 @@
 | ------------- |------------- |
 | result      | ---| 
 
-##  `sendtoaddress`
+###  `sendtoaddress`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -165,7 +194,7 @@
 | ------------- |------------- |
 | result      | ---| 
 
-##  `listtransactions`
+###  `listtransactions`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -176,4 +205,28 @@
 
 | Result   | Incompatibility Note  |
 | ------------- |------------- |
-| result      | None|  
+| result      | ---|  
+| →Payment       | ---|  
+| → →account       | ---|  
+|  → →address      | ---|  
+|  → →category      | always "send" or "receive" |  
+|  → →amount 	     | ---|  
+|  → →label     | always doesn't exist|  
+| → →vout       | always 0|  
+|→ →fee       | always 0|  
+|→ →confirmations       | 0 if not confirmed, 100000 if confirmed|  
+| → →trusted      | exists and false if not confirmed|  
+| → →generated       |always doesn't exist|  
+| → →blockhash      | exists and empty string if confirmed|  
+| → →blockindex       |0 and empty string if confirmed|  
+| → →blocktime      | exists and same as the transaction timestamp if confirmed|   
+|→ →txid        | bundle hash|  
+| → →walletconflicts       | always empty array|  
+|  → → →TXID      | always doesn't exist|  
+|  → →time      | same as thye transaction timestamp|  
+| → →timereceived       | same as thye transaction timestamp|  
+|  → →comment      | always doesn't exists)|
+| → →to      | always doesn't exists|
+| → →otheraccount      |always doesn't exists|
+| → →bip125-replaceable      | always "no"|  
+| → →abandoned       | exists and false if category is "send"|  
