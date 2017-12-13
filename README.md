@@ -49,9 +49,8 @@ Dependencies:
 	$ mkdir pkg
 	$ exoprt GOPATH=`pwd`
 	$ cd src
-	$ (copy giota and aidosd to current directory)
-	$ cd aidosd
-	$ go get
+	$ go get -u github.com/AidosKuneen/aidosd
+	$ cd github.com/AidosKuneen/aidosd
 	$ go build -o adkd
 ```
 
@@ -107,11 +106,12 @@ $ ./adkd
 Please enter password: <input your password> 
 ```
 
+Then,`aidosd` starts to run in background.
+
 If you forget the password, YOU CANNOT ACCESS YOUR SEED ANYMORE (i.e. you cannot use your token).
 Please remove the database in this case, i.e. remove `aidosd.db` .
 
 
-Then,`aidosd` starts to run in background.
 
 To know it is still running, run:
 
