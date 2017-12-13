@@ -21,40 +21,181 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/AidosKuneen/aidosd/aidosd"
+	"github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/json"
+	"golang.org/x/crypto/ssh/terminal"
+)
+
+const (
+	stopping = byte(iota)
+	working
+
+	controlURL = "127.0.0.1:33631"
 )
 
 func main() {
-	var isVerbose bool
+	aidosd.SetLog(true)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s <options>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-	flag.BoolVar(&isVerbose, "v", false, "print logs")
+	var cmd string
+	flag.StringVar(&cmd, "cmd", "start", "command")
 	flag.Parse()
-	conf := aidosd.ParseConf()
-	aidosd.SetLog(isVerbose)
-	aidosd.SetDB()
-	aidosd.Password()
+
+	switch cmd {
+	case "child":
+		runChild()
+	case "start":
+		passwd := getPasswd()
+		if err := runParent(passwd, os.Args...); err != nil {
+			panic(err)
+		}
+		fmt.Println("aidosd is started")
+	case "status":
+		stat, err := callStatus()
+		if err != nil {
+			fmt.Println("aidosd is not running")
+		}
+		switch stat {
+		case working:
+			fmt.Println("aidosd is working")
+		case stopping:
+			fmt.Println("aidosd is stopping")
+		default:
+			fmt.Println("unknown status")
+		}
+	case "stop":
+		if err := callStop(); err != nil {
+			panic(err)
+		}
+		fmt.Println("aidosd has stopped")
+	default:
+		fmt.Println("unknown cmd")
+	}
+}
+
+func callStatus() (byte, error) {
+	var stat byte
+	err := call("Control.Status", &struct{}{}, &stat)
+	return stat, err
+}
+
+func callStop() error {
+	return call("Control.Stop", &struct{}{}, &struct{}{})
+}
+
+//Control is a struct for controling child.
+type Control struct {
+	status byte
+}
+
+//Start starts aidosd with password.
+func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
+	conf, err := aidosd.Prepare("aidosd.conf", []byte(*args))
+	if err != nil {
+		return err
+	}
 	go func() {
 		for {
-			if err := aidosd.Walletnotify(conf); err != nil {
+			if _, err := aidosd.Walletnotify(conf); err != nil {
 				log.Print(err)
 			}
 			time.Sleep(time.Minute)
 		}
 	}()
-	log.Println("starting the aidosd server at port http://0.0.0.0:" + conf.RPCPort)
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("starting the aidosd server at port http://0.0.0.0:" + conf.RPCPort)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		aidosd.Handle(conf, w, r)
-
 	})
-	log.Fatal(http.ListenAndServe("0.0.0.0:"+conf.RPCPort, nil))
+	go func() {
+		if err := http.ListenAndServe("0.0.0.0:"+conf.RPCPort, mux); err != nil {
+			log.Println(err)
+		}
+	}()
+	c.status = working
+	return nil
+}
+
+//Stop stops aidosd.
+func (c *Control) Stop(r *http.Request, args *struct{}, reply *struct{}) error {
+	aidosd.Exit()
+	c.status = stopping
+	return nil
+}
+
+//Status returns if aidosd is working or stopping.
+func (c *Control) Status(r *http.Request, args *struct{}, reply *byte) error {
+	*reply = c.status
+	return nil
+}
+
+func call(method string, args interface{}, ret interface{}) error {
+	url := "http://" + controlURL + "/control"
+	message, err := json.EncodeClientRequest(method, args)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(message))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := new(http.Client)
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("Error in sending request to %s. %s", url, err)
+	}
+	defer resp.Body.Close()
+
+	return json.DecodeClientResponse(resp.Body, ret)
+}
+
+func runParent(passwd []byte, oargs ...string) error {
+	args := []string{"--cmd", "child"}
+	args = append(args, oargs[1:]...)
+	cmd := exec.Command(oargs[0], args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	time.Sleep(3 * time.Second)
+
+	return call("Control.Start", &passwd, &struct{}{})
+}
+
+func getPasswd() []byte {
+	fmt.Print("Enter password: ")
+	pwd, err := terminal.ReadPassword(int(syscall.Stdin)) //int conversion is needed for win
+	fmt.Println("")
+	if err != nil {
+		panic(err)
+	}
+	return pwd
+}
+
+func runChild() error {
+	s := rpc.NewServer()
+	s.RegisterCodec(json.NewCodec(), "application/json")
+	s.RegisterService(new(Control), "")
+	http.Handle("/rpc", s)
+
+	mux := http.NewServeMux()
+	mux.Handle("/control", s)
+	log.Println("started  control server on aidosd...")
+	return http.ListenAndServe(controlURL, mux)
 }

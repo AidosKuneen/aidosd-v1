@@ -58,7 +58,7 @@ func addOutputs(trs []gadk.Transfer) (gadk.Bundle, []gadk.Trytes, int64) {
 //PrepareTransfers gets an array of transfer objects as input,
 //and then prepare the transfer by generating the correct bundle,
 // as well as choosing and signing the inputs if necessary (if it's a value transfer).
-func PrepareTransfers(api *gadk.API, ac *Account, trs []gadk.Transfer) (gadk.Bundle, error) {
+func PrepareTransfers(api apis, ac *Account, trs []gadk.Transfer) (gadk.Bundle, error) {
 	var err error
 
 	bundle, frags, total := addOutputs(trs)
@@ -90,7 +90,7 @@ func PrepareTransfers(api *gadk.API, ac *Account, trs []gadk.Transfer) (gadk.Bun
 	return bundle, err
 }
 
-func addRemainder(api *gadk.API, bundle *gadk.Bundle, ac *Account, total int64, useChange bool) (bool, error) {
+func addRemainder(api apis, bundle *gadk.Bundle, ac *Account, total int64, useChange bool) (bool, error) {
 	for i, bal := range ac.Balances {
 		value := bal.Value
 		if useChange {
@@ -199,29 +199,13 @@ func doPow(tra *gadk.GetTransactionsToApproveResponse, depth int64, trytes []gad
 }
 
 //PowTrytes does attachToMesh.
-func PowTrytes(api *gadk.API, depth int64, trytes []gadk.Transaction, mwm int64, pow gadk.PowFunc) error {
+func PowTrytes(api apis, depth int64, trytes []gadk.Transaction, mwm int64, pow gadk.PowFunc) error {
 	tra, err := api.GetTransactionsToApprove(depth)
 	if err != nil {
 		return err
 	}
-	if pow == nil {
-		at := gadk.AttachToMeshRequest{
-			TrunkTransaction:   tra.TrunkTransaction,
-			BranchTransaction:  tra.BranchTransaction,
-			MinWeightMagnitude: mwm,
-			Trytes:             trytes,
-		}
-		// attach to mesh - do pow
-		attached, err := api.AttachToMesh(&at)
-		if err != nil {
-			return err
-		}
-		trytes = attached.Trytes
-	} else {
-		err := doPow(tra, depth, trytes, mwm, pow)
-		if err != nil {
-			return err
-		}
+	if err := doPow(tra, depth, trytes, mwm, pow); err != nil {
+		return err
 	}
 	if err := gadk.Bundle(trytes).IsValid(); err != nil {
 		return err
@@ -234,7 +218,7 @@ func PowTrytes(api *gadk.API, depth int64, trytes []gadk.Transaction, mwm int64,
 	return nil
 }
 
-func broadcast(api *gadk.API, trytes []gadk.Transaction) error {
+func broadcast(api apis, trytes []gadk.Transaction) error {
 	// Broadcast and store tx
 	if err := api.StoreTransactions(trytes); err != nil {
 		return err
@@ -267,7 +251,7 @@ var powMutex = sync.Mutex{}
 //Send sends token.
 //if you need to pow locally, you must specifiy pow func.
 //otherwirse this calls AttachToMesh API.
-func Send(api *gadk.API, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes, error) {
+func Send(api apis, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes, error) {
 	bals := make([]Balance, len(ac.Balances))
 	copy(bals, ac.Balances)
 	bd, err := PrepareTransfers(api, ac, trs)
