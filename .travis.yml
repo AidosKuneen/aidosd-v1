@@ -1,8 +1,10 @@
 language: go
-
+sudo: required
 go:
-  - 1.9.x
-
+- 1.9.x
+env:
+  global:
+  - FILE_NAME: aidosd_${TRAVIS_TAG}_linux_amd64
 before_install:
 - go get -u github.com/axw/gocov/gocov
 - go get -u github.com/alecthomas/gometalinter
@@ -11,9 +13,20 @@ before_install:
 - export PATH=$PATH:$GOPATH/bin
 - gometalinter --install --update
 - go generate -x ./...
-
 script:
 - travis_wait 30 go test ./... -tags travis -v  -timeout 100m
-
 after_success:
 - gometalinter -e bindata --deadline=1000s ./...
+- go build -o adkd
+- tar -cvf  ${FILE_NAME}.tar adkd aidosd.conf
+- gzip ${FILE_NAME}.tar
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key:
+    secure: JZffWz3ZTyk/eqpXqxZShFICai1Pv82nclYAyrZn4VKkQSsnGTLgIwpxWYjH1RNocduq8K8UNTH4PlDBRUZpfCjNH0FxOPWjBPhOquh3XMnhxzx0+7ERexW8I9ewdyE4TUd1zQQxvtDJpckH4omQmDXH4r9j7yst1KJpqSZBweFq0RMmVGuLGXClhRqcVln9qhRg9M4D8gOfU0A6wAlzRnNdIB1CLRrgpG6u6dNGEGxBLvok5x/K/wF05Kf/AjIqpBb8O/eWc3Mv9gJGGcSRdEDOEIzOAoDL9lmJwzwU37FxuWpV63SyYSdRVjfq8bRiJtbdPR8rMS6hNJTYLwWDjPnz7n1AAg7LDeZ5q6H9TUik0Uqwd8UArJPSurq3oiXN5In6UAgEZiWeU/wqEIURVS1QK5uv2kIFxDwVuvOwNNmnJpj8m2rRIFzQYGY34TyZS7Umy4eJymrAU52GTFkvU9Mng/8FQpTIxzrVysH/UlOl8ePUeZz4pdBDRCinM2hV6rPd2EO0pT/IX7ZCVPsHmA3ewilMZyyJ6rLTrrle9APlPMyR3KXVeJjLwHsswceUjwTtKwatD53Q35gq2BYnPnQlYKF2A/xwGupV/Z9qs/Pcf3k/W/kUcLMlBDCs5OSXqPH1M3POeWoE16WaDPcVl3gSCJu/kV4O6sI2+J1vLPE=
+  file:  ${FILE_NAME}.tar.gz
+  on:
+    tags: true
+    all_branches: true
+condition: "$TRAVIS_TAG =~ ^v[0-9].*$"
