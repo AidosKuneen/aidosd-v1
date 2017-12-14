@@ -19,6 +19,7 @@ install:
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
   - go version
   - go env
+  - go get -u 
 
 build_script:
   - go build -o adkd .
