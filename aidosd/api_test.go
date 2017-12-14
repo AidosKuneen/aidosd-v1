@@ -30,6 +30,12 @@ import (
 )
 
 func prepareTest(t *testing.T) *Conf {
+	if db != nil {
+		if err := db.Close(); err != nil {
+			t.Log(err)
+		}
+		db = nil
+	}
 	cdir, err := os.Getwd()
 	if err != nil {
 		t.Error(err)
@@ -574,7 +580,6 @@ func testListAccounts(conf *Conf, d1 *dummy1) {
 	for ac := range d1.acc2adr {
 		if result[ac] != float64(total[ac])/100000000 {
 			d1.t.Error("invalid balance", ac, result[ac], "must be", total[ac])
-			d1.t.Error(float64(total[ac]) * 0.00000001)
 		}
 	}
 }

@@ -108,7 +108,7 @@ func check(conf *Conf) error {
 		string("BC" + gadk.EmptyHash[2:]),
 	}
 	for i, o := range outs {
-		o = strings.Trim(o, "\n")
+		o = strings.TrimSpace(o)
 		if o != res[i] {
 			return errors.New("invalid out2")
 		}
