@@ -56,7 +56,9 @@ func main() {
 
 	switch cmd {
 	case "child":
-		runChild()
+		if err := runChild(); err != nil {
+			panic(err)
+		}
 	case "start":
 		passwd := getPasswd()
 		if err := runParent(passwd, os.Args...); err != nil {
@@ -103,7 +105,7 @@ type Control struct {
 
 //Start starts aidosd with password.
 func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
-	conf, err := aidosd.Prepare("aidosd.conf", []byte(*args))
+	conf, err := aidosd.Prepare("aidosd.conf", *args)
 	if err != nil {
 		return err
 	}
@@ -158,7 +160,11 @@ func call(method string, args interface{}, ret interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Error in sending request to %s. %s", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
 
 	return json.DecodeClientResponse(resp.Body, ret)
 }
@@ -191,7 +197,9 @@ func getPasswd() []byte {
 func runChild() error {
 	s := rpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")
-	s.RegisterService(new(Control), "")
+	if err := s.RegisterService(new(Control), ""); err != nil {
+		panic(err)
+	}
 	http.Handle("/rpc", s)
 
 	mux := http.NewServeMux()

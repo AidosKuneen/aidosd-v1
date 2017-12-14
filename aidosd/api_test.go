@@ -21,7 +21,6 @@
 package aidosd
 
 import (
-	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -30,19 +29,23 @@ import (
 	"github.com/AidosKuneen/gadk"
 )
 
-func TestAPI(t *testing.T) {
+func prepareTest(t *testing.T) *Conf {
 	cdir, err := os.Getwd()
 	if err != nil {
 		t.Error(err)
 	}
 	fdb := filepath.Join(cdir, "aidosd.db")
-	if err := os.Remove(fdb); err != nil {
+	if err = os.Remove(fdb); err != nil {
 		t.Log(err)
 	}
 	conf, err := Prepare("../aidosd.conf", []byte("test"))
 	if err != nil {
 		t.Error(err)
 	}
+	return conf
+}
+func TestAPI(t *testing.T) {
+	conf := prepareTest(t)
 	acc := make(map[string][]gadk.Address)
 	for _, ac := range []string{"ac1", "ac2", ""} {
 		acc[ac] = newAddress(t, conf, ac)
@@ -251,7 +254,6 @@ func testgettransaction(conf *Conf, d1 *dummy1) {
 	}
 	ok = false
 	for _, txx := range txs {
-		log.Println(txx.Timestamp.Unix())
 		if tx.Time == txx.Timestamp.Unix() {
 			ok = true
 		}
@@ -295,7 +297,7 @@ func testgettransaction(conf *Conf, d1 *dummy1) {
 		if d.Category == "receive" && d.Abandoned != nil {
 			d1.t.Error("invalid abandone")
 		}
-		if d.Category == "send" && (d.Abandoned == nil || *d.Abandoned != false) {
+		if d.Category == "send" && (d.Abandoned == nil || *d.Abandoned) {
 			d1.t.Error("invalid abandone")
 		}
 	}
@@ -436,14 +438,14 @@ func testlisttransactions(conf *Conf, d1 *dummy1, ac string) {
 			if tx.Blockhash != nil || tx.Blockindex != nil || tx.Blocktime != nil {
 				d1.t.Error("invalid block params")
 			}
-			if *tx.Trusted != false {
+			if *tx.Trusted {
 				d1.t.Error("invalid trusted")
 			}
 		}
 		if tx.Category == "receive" && tx.Abandoned != nil {
 			d1.t.Error("invalid abandone")
 		}
-		if tx.Category == "send" && (tx.Abandoned == nil || *tx.Abandoned != false) {
+		if tx.Category == "send" && (tx.Abandoned == nil || *tx.Abandoned) {
 			d1.t.Error("invalid abandone")
 		}
 	}
@@ -529,14 +531,14 @@ func testlisttransactions2(conf *Conf, d1 *dummy1) {
 			if tx.Blockhash != nil || tx.Blockindex != nil || tx.Blocktime != nil {
 				d1.t.Error("invalid block params")
 			}
-			if *tx.Trusted != false {
+			if *tx.Trusted {
 				d1.t.Error("invalid trusted")
 			}
 		}
 		if tx.Category == "receive" && tx.Abandoned != nil {
 			d1.t.Error("invalid abandone")
 		}
-		if tx.Category == "send" && (tx.Abandoned == nil || *tx.Abandoned != false) {
+		if tx.Category == "send" && (tx.Abandoned == nil || *tx.Abandoned) {
 			d1.t.Error("invalid abandone")
 		}
 	}
