@@ -23,7 +23,6 @@ package aidosd
 import (
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,24 +44,12 @@ func TestAPI(t *testing.T) {
 		t.Error(err)
 	}
 	acc := make(map[string][]gadk.Address)
-	vals := make(map[gadk.Address]int64)
 	for _, ac := range []string{"ac1", "ac2", ""} {
-		adr := newAddress(t, conf, ac)
-		for _, a := range adr {
-			acc[ac] = append(acc[ac], a)
-			vals[a] = int64(rand.Int31())
-		}
+		acc[ac] = newAddress(t, conf, ac)
 	}
-	d1 := &dummy1{
-		acc2adr: acc,
-		vals:    vals,
-		mtrytes: make(map[gadk.Trytes]gadk.Transaction),
-		t:       t,
-		isConf:  false,
-	}
+	d1 := newdummy(acc, t)
 	conf.api = d1
 
-	d1.setupTXs()
 	testListAccounts(conf, d1)
 	testlistaddressgroupings(conf, d1)
 	testvalidateaddress1(conf, d1, "HZSMDORPCAFJJJNEEWZSP9OCQZAHCAVPBAXUTJKRCYZXMSNGERFZLQPNWOQQHK9RMJO9PNSVV9KR9DONH", true)
@@ -129,7 +116,7 @@ func testlistaddressgroupings(conf *Conf, d1 *dummy1) {
 		if !ok {
 			d1.t.Error("result[0][i][1] must be float")
 		}
-		if float64(v)*0.00000001 != val {
+		if float64(v)/100000000 != val {
 			d1.t.Error("invalid value")
 		}
 		acc2, ok := d1.adr2acc[adr]
@@ -299,8 +286,8 @@ func testgettransaction(conf *Conf, d1 *dummy1) {
 		if d.Amount == 0 {
 			d1.t.Error("invalid amount")
 		}
-		if d.Amount != float64(txs[i].Value)*0.00000001 {
-			d1.t.Error("invalid amount")
+		if d.Amount != float64(txs[i].Value)/100000000 {
+			d1.t.Error("invalid amount", d.Amount, txs[i].Value, adr)
 		}
 		if d.Fee != 0 {
 			d1.t.Error("invalid dummy params")
@@ -337,8 +324,8 @@ func testgetbalance(conf *Conf, d1 *dummy1, ac string) {
 	for _, a := range d1.acc2adr[ac] {
 		total += d1.vals[a]
 	}
-	if result != float64(total)*0.00000001 {
-		d1.t.Error("invalid balance", result, ac, float64(total)*0.00000001, len(d1.acc2adr[""]))
+	if result != float64(total)/100000000 {
+		d1.t.Error("invalid balance", result, ac, total, len(d1.acc2adr[""]))
 	}
 }
 
@@ -365,8 +352,8 @@ func testgetbalance2(conf *Conf, d1 *dummy1) {
 	for _, v := range d1.vals {
 		total += v
 	}
-	if result != float64(total)*0.00000001 {
-		d1.t.Error("invalid balance", result, float64(total)*0.00000001, len(d1.acc2adr[""]))
+	if result != float64(total)/100000000 {
+		d1.t.Error("invalid balance", result, total, len(d1.acc2adr[""]))
 	}
 }
 
@@ -414,8 +401,8 @@ func testlisttransactions(conf *Conf, d1 *dummy1, ac string) {
 		if tx.Amount == 0 {
 			d1.t.Error(" amount should not be 0")
 		}
-		if tx.Amount != float64(otx.Value)*0.00000001 {
-			d1.t.Error("invalid amount", tx.Amount, ac)
+		if tx.Amount != float64(otx.Value)/100000000 {
+			d1.t.Error("invalid amount", int64(tx.Amount*100000000), otx.Value, ac)
 		}
 		if tx.Time != otx.Timestamp.Unix() {
 			d1.t.Error("invalid time")
@@ -507,7 +494,7 @@ func testlisttransactions2(conf *Conf, d1 *dummy1) {
 		if tx.Amount == 0 {
 			d1.t.Error(" amount should not be 0")
 		}
-		if tx.Amount != float64(otx.Value)*0.00000001 {
+		if tx.Amount != float64(otx.Value)/100000000 {
 			d1.t.Error("invalid amount", tx.Amount)
 		}
 		if tx.Time != otx.Timestamp.Unix() {
@@ -583,8 +570,9 @@ func testListAccounts(conf *Conf, d1 *dummy1) {
 		}
 	}
 	for ac := range d1.acc2adr {
-		if result[ac] != float64(total[ac])*0.00000001 {
-			d1.t.Error("invalid balance", ac, result[ac], "must be", float64(total[ac])*0.00000001)
+		if result[ac] != float64(total[ac])/100000000 {
+			d1.t.Error("invalid balance", ac, result[ac], "must be", total[ac])
+			d1.t.Error(float64(total[ac]) * 0.00000001)
 		}
 	}
 }

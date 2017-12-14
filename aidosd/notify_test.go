@@ -22,7 +22,7 @@ package aidosd
 
 import (
 	"errors"
-	"math/rand"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -46,23 +46,11 @@ func TestNotify1(t *testing.T) {
 		t.Error(err)
 	}
 	acc := make(map[string][]gadk.Address)
-	vals := make(map[gadk.Address]int64)
 	for _, ac := range []string{"ac1"} {
-		adr := newAddress(t, conf, ac)
-		for _, a := range adr {
-			acc[ac] = append(acc[ac], a)
-			vals[a] = int64(rand.Int31())
-		}
+		acc[ac] = newAddress(t, conf, ac)
 	}
-	d1 := &dummy1{
-		acc2adr: acc,
-		vals:    vals,
-		mtrytes: make(map[gadk.Trytes]gadk.Transaction),
-		t:       t,
-		isConf:  false,
-	}
+	d1 := newdummy(acc, t)
 	conf.api = d1
-	d1.setupTXs()
 	if err := check(conf); err != nil {
 		t.Error(err)
 	}
@@ -103,23 +91,16 @@ func TestNotify2(t *testing.T) {
 		t.Error(err)
 	}
 	acc := make(map[string][]gadk.Address)
-	vals := make(map[gadk.Address]int64)
 	for _, ac := range []string{"ac1"} {
-		adr := newAddress(t, conf, ac)
-		for _, a := range adr {
-			acc[ac] = append(acc[ac], a)
-			vals[a] = int64(rand.Int31())
-		}
+		acc[ac] = newAddress(t, conf, ac)
 	}
-	d1 := &dummy1{
-		acc2adr: acc,
-		vals:    vals,
-		mtrytes: make(map[gadk.Trytes]gadk.Transaction),
-		t:       t,
-		isConf:  true,
-	}
+	d1 := newdummy(acc, t)
 	conf.api = d1
-	d1.setupTXs()
+	if err := check(conf); err != nil {
+		t.Error(err)
+	}
+	d1.isConf = true
+	conf.api = d1
 	if err := check(conf); err != nil {
 		t.Error(err)
 	}
@@ -139,7 +120,8 @@ func check(conf *Conf) error {
 		return err
 	}
 	if len(outs) != 3 {
-		return errors.New("invalid out")
+		log.Println(len(outs))
+		return errors.New("invalid out1")
 	}
 	sort.Slice(outs, func(i, j int) bool {
 		return outs[i][1] < outs[j][1]
@@ -152,7 +134,7 @@ func check(conf *Conf) error {
 	for i, o := range outs {
 		o = strings.Trim(o, "\n")
 		if o != res[i] {
-			return errors.New("invalid out")
+			return errors.New("invalid out2")
 		}
 	}
 	return nil

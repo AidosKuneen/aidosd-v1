@@ -5,8 +5,8 @@
 * Error codes and error string from these commands are not same as ones from bitcoin.
 * Deposit addresses must be changed per every deposits e.g. by calling `getnewaddress` on your exchange system by your own. This library doesn't care about the changing addresses.
 * Formats of addresses, hashes, transactions etc are COMPLETELY different with ones in Bitcon.
-* You cannot use "watch-only address" and "transaction comment" functions. All of these parameters are ignored.
-* Confirmations in ADK are regarded as "finalized", so all parameter for
+* You cannot use "watch-only address" and "transaction comment". All of these parameters are ignored.
+* Confirmations in ADK are regarded as "finalized", so all parameters for
  number of comfirmations  are ignored.
 
 ## Details for Each APIs
@@ -146,15 +146,15 @@
 |→confirmations       | 0 if not confirmed, 100000 if confirmed|  
 | →generated       |always doesn't exist|  
 | →blockhash      | exists and empty string if confirmed|  
-| →blockindex       |0 and empty string if confirmed|  
+| →blockindex       |exists and 0 if confirmed|  
 | →blocktime      | exists and same as the transaction timestamp if confirmed| 
 |→txid        | bundle hash|  
 | →walletconflicts       | always empty array|  
 |  → →TXID      | always doesn't exist|  
-|  →time      | same as thye transaction timestamp|  
-| →timereceived       | same as thye transaction timestamp|  
+|  →time      | same as transaction timestamp|  
+| →timereceived       | same as transaction timestamp|  
 | →bip125-replaceable      | always "no"|  
-|  →comment      | always doesn't exists)|
+|  →comment      | always doesn't exists|
 | →to      | always doesn't exists|
 | →details      | ---|
 | → →involvesWatchonly       | always doesn't exists|  
@@ -223,8 +223,8 @@
 |→ →txid        | bundle hash|  
 | → →walletconflicts       | always empty array|  
 |  → → →TXID      | always doesn't exist|  
-|  → →time      | same as thye transaction timestamp|  
-| → →timereceived       | same as thye transaction timestamp|  
+|  → →time      | same as  transaction timestamp|  
+| → →timereceived       | same as  transaction timestamp|  
 |  → →comment      | always doesn't exists)|
 | → →to      | always doesn't exists|
 | → →otheraccount      |always doesn't exists|

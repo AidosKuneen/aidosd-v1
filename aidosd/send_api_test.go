@@ -21,7 +21,6 @@
 package aidosd
 
 import (
-	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,27 +44,14 @@ func preparetSend(t *testing.T) (*Conf, *dummy1) {
 		t.Error(err)
 	}
 	acc := make(map[string][]gadk.Address)
-	vals := make(map[gadk.Address]int64)
 	for _, ac := range []string{"ac1", "ac2", ""} {
-		adr := newAddress(t, conf, ac)
-		for _, a := range adr {
-			acc[ac] = append(acc[ac], a)
-			vals[a] = int64(rand.Int31() + 0.2*100000000)
-		}
+		acc[ac] = newAddress(t, conf, ac)
 	}
-	return conf, &dummy1{
-		acc2adr: acc,
-		vals:    vals,
-		mtrytes: make(map[gadk.Trytes]gadk.Transaction),
-		t:       t,
-		isConf:  true,
-		ch:      make(chan struct{}),
-	}
+	return conf, newdummy(acc, t)
 }
 func TestSend(t *testing.T) {
 	conf, d1 := preparetSend(t)
 	conf.api = d1
-	d1.setupTXs()
 	err := sendmany(conf, nil, nil)
 	if err.Error() != "not priviledged" {
 		t.Error("should be error")
@@ -88,8 +74,8 @@ func TestSend(t *testing.T) {
 
 func TestSend2(t *testing.T) {
 	conf, d1 := preparetSend(t)
+	d1.isConf = true
 	conf.api = d1
-	d1.setupTXs()
 	if _, err := Walletnotify(conf); err != nil {
 		t.Error(err)
 	}
@@ -99,8 +85,8 @@ func TestSend2(t *testing.T) {
 
 func TestSend3(t *testing.T) {
 	conf, d1 := preparetSend(t)
+	d1.isConf = true
 	conf.api = d1
-	d1.setupTXs()
 	if _, err := Walletnotify(conf); err != nil {
 		t.Error(err)
 	}
