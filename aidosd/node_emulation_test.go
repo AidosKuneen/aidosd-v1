@@ -21,6 +21,7 @@
 package aidosd
 
 import (
+	"log"
 	"math"
 	"math/rand"
 	"sort"
@@ -31,17 +32,18 @@ import (
 )
 
 type dummy1 struct {
+	acc2adr map[string][]gadk.Address
+	adr2acc map[gadk.Address]string
+	vals    map[gadk.Address]int64
+	mtrytes map[gadk.Trytes]gadk.Transaction
+	t       *testing.T
+	isConf  bool
+	ch      chan struct{}
+
 	txs         map[gadk.Address][]*gadk.Transaction
-	acc2adr     map[string][]gadk.Address
-	adr2acc     map[gadk.Address]string
-	vals        map[gadk.Address]int64
-	mtrytes     map[gadk.Trytes]gadk.Transaction
-	t           *testing.T
-	isConf      bool
 	bundle      gadk.Bundle
 	broadcasted []gadk.Transaction
 	stored      []gadk.Transaction
-	ch          chan struct{}
 }
 
 func (d *dummy1) list4Bundle() ([]gadk.Transaction, float64) {
@@ -79,40 +81,64 @@ func (d *dummy1) listall() []*gadk.Transaction {
 	})
 	return res
 }
-func (d *dummy1) setupTXs() {
-	d.txs = make(map[gadk.Address][]*gadk.Transaction)
-	d.adr2acc = make(map[gadk.Address]string)
-	for k, v := range d.acc2adr {
+
+func newdummy(accadr map[string][]gadk.Address, t *testing.T) *dummy1 {
+	rand.Seed(time.Now().Unix())
+	adr2acc := make(map[gadk.Address]string)
+	for k, v := range accadr {
 		for _, vv := range v {
-			d.adr2acc[vv] = k
+			adr2acc[vv] = k
 		}
 	}
+	d1 := &dummy1{
+		acc2adr: accadr,
+		adr2acc: adr2acc,
+		vals:    make(map[gadk.Address]int64),
+		mtrytes: make(map[gadk.Trytes]gadk.Transaction),
+		t:       t,
+		isConf:  false,
+		ch:      make(chan struct{}),
+
+		txs: make(map[gadk.Address][]*gadk.Transaction),
+	}
+	d1.setupTXs()
+	return d1
+}
+
+func (d *dummy1) setupTXs() {
 	c := []string{"A", "B", "C"}
-	for adr, v := range d.vals {
+	for adr := range d.adr2acc {
+		var sum int64
 		for i := 0; i < 5; i++ {
+			val := int64(rand.Int31() - math.MaxInt32/2)
+			sum += val
 			tx := &gadk.Transaction{
 				Address:   adr,
-				Value:     v / 5,
+				Value:     val,
 				Timestamp: time.Now().Add(time.Duration(-i) * time.Second),
 				Bundle:    gadk.Trytes("B"+c[i%3]) + gadk.EmptyHash[2:],
 			}
-			if i == 0 {
-				tx.Value += v % 5
+			if i == 4 {
+				for sum < 0.2*100000000 {
+					val = int64(rand.Int31())
+					tx.Value += val
+					sum += val
+				}
 			}
 			d.txs[adr] = append(d.txs[adr], tx)
 		}
+		d.vals[adr] = sum
+		log.Println(adr, sum)
 	}
 	for i := 0; i < 5; i++ {
 		tx := gadk.Transaction{
 			Address:   gadk.EmptyAddress,
-			Value:     rand.Int63() - math.MaxInt64/2,
+			Value:     int64(rand.Int31() - math.MaxInt32/2),
 			Timestamp: time.Now().Add(time.Duration(-rand.Int31()%100000) * time.Second),
 		}
 		if i < 2 {
-			var k string
-			for k = range d.acc2adr {
+			for tx.Address = range d.adr2acc {
 			}
-			tx.Address = d.acc2adr[k][0]
 		}
 		if i == 3 {
 			tx.Value = 0
