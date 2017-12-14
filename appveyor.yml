@@ -24,7 +24,7 @@ install:
 build_script:
  - go build -o adkd.exe -ldflags "-X github.com/AidosKuneen/aidosd/Version=\"$(appveyor_repo_tag_name)\""
  - 7z a %FILE_NAME%.zip adkd.exe aidosd.conf
-  - dir
+ - dir
 
 test_script:
   - go tool vet -all .
