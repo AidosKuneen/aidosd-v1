@@ -1,7 +1,7 @@
 [![GoDoc](https://godoc.org/github.com/AidosKuneen/aidosd?status.svg)](https://godoc.org/github.com/AidosKuneen/aidosd)
 [![Build Status](https://travis-ci.org/AidosKuneen/aidosd.svg?branch=master)](https://travis-ci.org/AidosKuneen/aidosd)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/AidosKuneen/aidosd/LICENSE)
-[![Build status](https://ci.appveyor.com/api/projects/status/5p4ap28dvq7s3abt?svg=true)](https://ci.appveyor.com/AidosKuneen/aidosd)
+[![Build status](https://ci.appveyor.com/api/projects/status/5p4ap28dvq7s3abt?svg=true)](https://ci.appveyor.com/project/keeplooking/aidosd)
 # aidosd
 
 aidosd is a deamon which acts as bitcoind for adk. For now impletented APIs are :
