@@ -103,14 +103,14 @@ $ ./adkd
 Please enter password: <input your password> 
 ```
 
-Then,`aidosd` starts to run in background.
+`aidosd` starts to run in background.
 
 If you forget the password, YOU CANNOT ACCESS YOUR SEED ANYMORE (i.e. you cannot use your token).
 Please remove the database in this case, i.e. remove `aidosd.db` .
 
 
 
-To know it is still running, run:
+To know if it is still running, run:
 
 ```
 	$ ./adkd status
