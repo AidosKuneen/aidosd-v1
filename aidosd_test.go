@@ -46,6 +46,10 @@ func spawn(t *testing.T) string {
 	if err = cmd.Run(); err != nil {
 		t.Error(err)
 	}
+	cmd = exec.Command("go", "build", "-o", "adkd.exe")
+	if err = cmd.Run(); err != nil {
+		t.Error(err)
+	}
 	command := filepath.Join(cdir, "adkd")
 	if err = runParent([]byte("test"), command); err != nil {
 		t.Error(err)
