@@ -56,7 +56,7 @@ loop:
 		res = append(res, tx)
 		amount += tx.Value
 	}
-	return res, float64(amount) * 0.00000001
+	return res, float64(amount) / 100000000
 }
 func (d *dummy1) list(ac string, count, skip int) []*gadk.Transaction {
 	var res []*gadk.Transaction
@@ -114,7 +114,7 @@ func (d *dummy1) setupTXs() {
 			tx := &gadk.Transaction{
 				Address:   adr,
 				Value:     val,
-				Timestamp: time.Now().Add(time.Duration(-i) * time.Second),
+				Timestamp: time.Now().Add(time.Duration(rand.Int31()-math.MaxInt32/2) * time.Second),
 				Bundle:    gadk.Trytes("B"+c[i%3]) + gadk.EmptyHash[2:],
 			}
 			if i == 4 {
