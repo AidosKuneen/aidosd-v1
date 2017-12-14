@@ -19,8 +19,8 @@ install:
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
   - go version
   - go env
-  - go get -u 
-
+  - go get -d ./...
+  
 build_script:
   - go build -o adkd .
   - 7z a %FILE_NAME%.zip adkd.exe aidosd.conf
