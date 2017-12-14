@@ -82,6 +82,7 @@ func parseConf(cfile string) *Conf {
 	}
 	str := string(dat)
 	for i, state := range strings.Split(str, "\n") {
+		state = strings.TrimSpace(state)
 		if len(state) == 0 {
 			continue
 		}
