@@ -14,7 +14,7 @@ before_install:
 - gometalinter --install --update
 - go generate -x ./...
 script:
-- travis_wait 30 go test ./... -tags travis -v  -timeout 100m
+- travis_wait 30 go test ./... -v  -timeout 100m
 after_success:
 - gometalinter -e bindata --deadline=1000s ./...
 - go build -o adkd
