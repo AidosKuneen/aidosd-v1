@@ -124,8 +124,8 @@ func getbalance(conf *Conf, req *Request, res *Response) error {
 	case 3:
 		fallthrough
 	case 2:
-		n, ok := data[1].(float64)
-		if !ok {
+		n, okk := data[1].(float64)
+		if !okk {
 			return errors.New("invalid number")
 		}
 		if n == 0 {
@@ -246,7 +246,7 @@ func validateaddress(conf *Conf, req *Request, res *Response) error {
 		return err
 	})
 
-	info := info{
+	infoi := info{
 		IsValid: valid,
 		Address: adrstr,
 		IsMine:  false,
@@ -254,14 +254,14 @@ func validateaddress(conf *Conf, req *Request, res *Response) error {
 	t := false
 	empty := ""
 	if ac != nil {
-		info.IsMine = true
-		info.Account = &ac.Name
-		info.IsWatchOnly = &t
-		info.IsScript = &t
-		info.Pubkey = &empty
-		info.IsCompressed = &t
+		infoi.IsMine = true
+		infoi.Account = &ac.Name
+		infoi.IsWatchOnly = &t
+		infoi.IsScript = &t
+		infoi.Pubkey = &empty
+		infoi.IsCompressed = &t
 	}
-	res.Result = &info
+	res.Result = &infoi
 	return nil
 }
 
@@ -415,15 +415,15 @@ func listtransactions(conf *Conf, req *Request, res *Response) error {
 	case 4:
 		fallthrough
 	case 3:
-		n, ok := data[2].(float64)
-		if !ok {
+		n, okk := data[2].(float64)
+		if !okk {
 			return errors.New("invalid number")
 		}
 		skip = int(n)
 		fallthrough
 	case 2:
-		n, ok := data[1].(float64)
-		if !ok {
+		n, okk := data[1].(float64)
+		if !okk {
 			return errors.New("invalid number")
 		}
 		num = int(n)

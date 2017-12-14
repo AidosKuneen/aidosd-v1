@@ -43,11 +43,11 @@ func spawn(t *testing.T) string {
 	fdb := filepath.Join(cdir, "aidosd.db")
 	_ = os.Remove(fdb)
 	cmd := exec.Command("go", "build", "-o", "adkd")
-	if err := cmd.Run(); err != nil {
+	if err = cmd.Run(); err != nil {
 		t.Error(err)
 	}
 	command := filepath.Join(cdir, "adkd")
-	if err := runParent([]byte("test"), command); err != nil {
+	if err = runParent([]byte("test"), command); err != nil {
 		t.Error(err)
 	}
 	stat, err := callStatus()
@@ -94,6 +94,9 @@ func (p *postparam) post() error {
 
 	auth := base64.StdEncoding.EncodeToString([]byte(user + ":" + pwd))
 	req, err := http.NewRequest("POST", "http://localhost:8332/", bytes.NewBuffer([]byte(p.body)))
+	if err != nil {
+		return err
+	}
 	req.Header.Add("Authorization", "Basic "+auth)
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)

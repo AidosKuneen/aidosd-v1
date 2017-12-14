@@ -79,13 +79,13 @@ func password(pwd []byte) error {
 		panic(err)
 	}
 	err = db.Update(func(tx *bolt.Tx) error {
-		var err error
+		var errr error
 		b := tx.Bucket([]byte("pass_phrase"))
 		if b == nil {
 			cipherText := block.encrypt(passPhrase)
-			b, err = tx.CreateBucket([]byte("pass_phrase"))
-			if err != nil {
-				return err
+			b, errr = tx.CreateBucket([]byte("pass_phrase"))
+			if errr != nil {
+				return errr
 			}
 			return b.Put([]byte("pass_phrase"), cipherText)
 		}

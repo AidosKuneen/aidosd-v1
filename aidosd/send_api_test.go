@@ -21,8 +21,6 @@
 package aidosd
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -31,18 +29,7 @@ import (
 )
 
 func preparetSend(t *testing.T) (*Conf, *dummy1) {
-	cdir, err := os.Getwd()
-	if err != nil {
-		t.Error(err)
-	}
-	fdb := filepath.Join(cdir, "aidosd.db")
-	if err := os.Remove(fdb); err != nil {
-		t.Log(err)
-	}
-	conf, err := Prepare("../aidosd.conf", []byte("test"))
-	if err != nil {
-		t.Error(err)
-	}
+	conf := prepareTest(t)
 	acc := make(map[string][]gadk.Address)
 	for _, ac := range []string{"ac1", "ac2", ""} {
 		acc[ac] = newAddress(t, conf, ac)
@@ -141,7 +128,7 @@ func testsendmany(conf *Conf, d1 *dummy1, isErr bool) {
 	d1.broadcasted = nil
 	d1.stored = nil
 	var acc0 []Account
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		var err error
 		acc0, err = listAccount(tx)
 		return err
@@ -160,11 +147,14 @@ func testsendmany(conf *Conf, d1 *dummy1, isErr bool) {
 		d1.t.Error(err)
 	}
 	var acc1 []Account
-	err = db.Update(func(tx *bolt.Tx) error {
-		var err error
-		acc1, err = listAccount(tx)
-		return err
+	err = db.View(func(tx *bolt.Tx) error {
+		var errr error
+		acc1, errr = listAccount(tx)
+		return errr
 	})
+	if err != nil {
+		d1.t.Error(err)
+	}
 	diff := getDiff(acc0, acc1)
 	checkResponse(diff, "ac1", d1, &resp, map[gadk.Address]int64{
 		adr1: int64(0.1 * 100000000),
@@ -184,10 +174,10 @@ func testsendtoaddress(conf *Conf, d1 *dummy1) {
 	d1.broadcasted = nil
 	d1.stored = nil
 	var acc0 []Account
-	err := db.Update(func(tx *bolt.Tx) error {
-		var err error
-		acc0, err = listAccount(tx)
-		return err
+	err := db.View(func(tx *bolt.Tx) error {
+		var errr error
+		acc0, errr = listAccount(tx)
+		return errr
 	})
 	if err != nil {
 		d1.t.Error(err)
@@ -197,11 +187,14 @@ func testsendtoaddress(conf *Conf, d1 *dummy1) {
 		d1.t.Error(err)
 	}
 	var acc1 []Account
-	err = db.Update(func(tx *bolt.Tx) error {
-		var err error
-		acc1, err = listAccount(tx)
-		return err
+	err = db.View(func(tx *bolt.Tx) error {
+		var errr error
+		acc1, errr = listAccount(tx)
+		return errr
 	})
+	if err != nil {
+		d1.t.Error(err)
+	}
 	diff := getDiff(acc0, acc1)
 	checkResponse(diff, "*", d1, &resp, map[gadk.Address]int64{
 		adr1: int64(0.1 * 100000000),
@@ -259,15 +252,6 @@ func checkResponse(diff map[gadk.Address]int64, acc string,
 	if b.Hash() != result {
 		d1.t.Error("invalid returned hash")
 	}
-	var acc1 []Account
-	err := db.Update(func(tx *bolt.Tx) error {
-		var err error
-		acc1, err = listAccount(tx)
-		return err
-	})
-	if err != nil {
-		d1.t.Error(err)
-	}
 
 	nsend := 0
 	nvalue := 0
@@ -322,9 +306,10 @@ func checkResponse(diff map[gadk.Address]int64, acc string,
 		}
 		if i != len(d1.broadcasted)-1 {
 			if tx.TrunkTransaction != d1.broadcasted[i+1].Hash() {
+				d1.t.Error("invalid trunk hash")
 			}
 			if tx.BranchTransaction != trunk {
-				d1.t.Error("invalid branch hash")
+				d1.t.Error("invalid trunk hash")
 			}
 		} else {
 			if tx.TrunkTransaction != trunk {
@@ -355,7 +340,7 @@ func testsendfrom(conf *Conf, d1 *dummy1) {
 	d1.broadcasted = nil
 	d1.stored = nil
 	var acc0 []Account
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		var err error
 		acc0, err = listAccount(tx)
 		return err
@@ -368,11 +353,14 @@ func testsendfrom(conf *Conf, d1 *dummy1) {
 		d1.t.Error(err)
 	}
 	var acc1 []Account
-	err = db.Update(func(tx *bolt.Tx) error {
-		var err error
-		acc1, err = listAccount(tx)
-		return err
+	err = db.View(func(tx *bolt.Tx) error {
+		var errr error
+		acc1, errr = listAccount(tx)
+		return errr
 	})
+	if err != nil {
+		d1.t.Error(err)
+	}
 	diff := getDiff(acc0, acc1)
 	checkResponse(diff, "ac2", d1, &resp, map[gadk.Address]int64{
 		adr1: int64(0.1 * 100000000),

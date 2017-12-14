@@ -23,8 +23,6 @@ package aidosd
 import (
 	"errors"
 	"log"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -33,18 +31,7 @@ import (
 )
 
 func TestNotify1(t *testing.T) {
-	cdir, err := os.Getwd()
-	if err != nil {
-		t.Error(err)
-	}
-	fdb := filepath.Join(cdir, "aidosd.db")
-	if err := os.Remove(fdb); err != nil {
-		t.Log(err)
-	}
-	conf, err := Prepare("../aidosd.conf", []byte("test"))
-	if err != nil {
-		t.Error(err)
-	}
+	conf := prepareTest(t)
 	acc := make(map[string][]gadk.Address)
 	for _, ac := range []string{"ac1"} {
 		acc[ac] = newAddress(t, conf, ac)
@@ -64,7 +51,7 @@ func TestNotify1(t *testing.T) {
 	}
 
 	d1.isConf = true
-	if err := check(conf); err != nil {
+	if err = check(conf); err != nil {
 		t.Error(err)
 	}
 
@@ -78,18 +65,7 @@ func TestNotify1(t *testing.T) {
 }
 
 func TestNotify2(t *testing.T) {
-	cdir, err := os.Getwd()
-	if err != nil {
-		t.Error(err)
-	}
-	fdb := filepath.Join(cdir, "aidosd.db")
-	if err := os.Remove(fdb); err != nil {
-		t.Log(err)
-	}
-	conf, err := Prepare("../aidosd.conf", []byte("test"))
-	if err != nil {
-		t.Error(err)
-	}
+	conf := prepareTest(t)
 	acc := make(map[string][]gadk.Address)
 	for _, ac := range []string{"ac1"} {
 		acc[ac] = newAddress(t, conf, ac)

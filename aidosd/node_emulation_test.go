@@ -21,7 +21,6 @@
 package aidosd
 
 import (
-	"log"
 	"math"
 	"math/rand"
 	"sort"
@@ -128,7 +127,6 @@ func (d *dummy1) setupTXs() {
 			d.txs[adr] = append(d.txs[adr], tx)
 		}
 		d.vals[adr] = sum
-		log.Println(adr, sum)
 	}
 	for i := 0; i < 5; i++ {
 		tx := gadk.Transaction{
