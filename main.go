@@ -44,9 +44,13 @@ const (
 	controlURL = "127.0.0.1:33631"
 )
 
+//Version is aidosd's version. It shoud be overwritten when building on travis.
+var Version = "unstable"
+
 func main() {
 	aidosd.SetLog(true)
 	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "aidosd version %v\n", Version)
 		fmt.Fprintf(os.Stderr, "%s <options>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
