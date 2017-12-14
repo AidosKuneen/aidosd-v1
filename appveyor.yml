@@ -28,7 +28,7 @@ build_script:
 
 test_script:
   - go tool vet -all .
-  - go test ./... -v  -timeout 100m
+  - go test ./... -v  -timeout 15m
 
 artifacts:
   - path: .\$(FILE_NAME).zip
@@ -39,7 +39,7 @@ deploy:
   description: ''
   provider: GitHub
   auth_token:
-    secure: FW3tJ3fMncxvs58/ifSP7w+kBl9BlxvRMr9liHmnBs14ALRG8Vfyol+sNhj9u2JA
+    secure: iN3vpbgZkGndynDF8/2YbXxENoBrGlQOUvJ7yJrVN5DXA4QrFpREYJVa+xlgLJFT
   artifact: binary # This is the name we specified in the artifacts section.
   draft: false
   prerelease: false
