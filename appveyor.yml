@@ -20,10 +20,12 @@ install:
   - go version
   - go env
   - go get -d ./...
-  
+
 build_script:
   - go build -o adkd .
+  - dir
   - 7z a %FILE_NAME%.zip adkd.exe aidosd.conf
+  - dir
 
 test_script:
   - go tool vet -all .
