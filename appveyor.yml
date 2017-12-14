@@ -1,0 +1,45 @@
+version: 1.0.0.{build}
+
+platform: x64
+
+branches:
+  only:
+    - master
+
+clone_folder: c:\gopath\src\github.com\AidosKuneen/aidosd
+
+environment:
+  GOPATH: c:\gopath
+  FILE_NAME: aidosd_$(appveyor_repo_tag_name)_win_amd64
+
+install:
+  - set Path=%Path%;C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64\bin\
+  - echo %PATH%
+  - echo %GOPATH%
+  - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
+  - go version
+  - go env
+
+build_script:
+  - go build -o adkd .
+  - 7z a %FILE_NAME%.zip adkd.exe aidosd.conf
+
+test_script:
+  - go tool vet -all .
+  - go test ./... -v  -timeout 100m
+
+artifacts:
+  - path: .\$(FILE_NAME).zip
+    name: binary
+
+deploy:
+  release: $(appveyor_repo_tag_name)
+  description: ''
+  provider: GitHub
+  auth_token:
+    secure: FW3tJ3fMncxvs58/ifSP7w+kBl9BlxvRMr9liHmnBs14ALRG8Vfyol+sNhj9u2JA
+  artifact: binary # This is the name we specified in the artifacts section.
+  draft: false
+  prerelease: false
+  on:
+    appveyor_repo_tag: true 
