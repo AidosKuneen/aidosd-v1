@@ -23,6 +23,7 @@ package aidosd
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"sync"
 	"time"
@@ -91,16 +92,13 @@ func sendmany(conf *Conf, req *Request, res *Response) error {
 	if !ok {
 		return errors.New("invalid account")
 	}
-	t, ok := data[1].(map[string]interface{})
+	t, ok := data[1].(string)
 	if !ok {
-		return errors.New("param must be map")
+		return errors.New("param must be a  map string")
 	}
 	target := make(map[string]float64)
-	for k, v := range t {
-		target[k], ok = v.(float64)
-		if !ok {
-			return errors.New("value must be float64")
-		}
+	if err := json.Unmarshal([]byte(t), &target); err != nil {
+		return err
 	}
 	trs := make([]gadk.Transfer, len(target))
 	i := 0

@@ -48,7 +48,7 @@ const (
 var Version = "unstable"
 
 func main() {
-	aidosd.SetLog(true)
+	aidosd.SetLog(false)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "aidosd version %v\n", Version)
 		fmt.Fprintf(os.Stderr, "%s <options>\n", os.Args[0])
@@ -73,6 +73,7 @@ func main() {
 		stat, err := callStatus()
 		if err != nil {
 			fmt.Println("aidosd is not running")
+			return
 		}
 		switch stat {
 		case working:

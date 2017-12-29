@@ -119,10 +119,9 @@ func testsendmany(conf *Conf, d1 *dummy1, isErr bool) {
 		ID:      "curltest",
 		Method:  "sendmany",
 		Params: []interface{}{"ac1",
-			map[string]interface{}{
-				string(adr1.WithChecksum()): 0.1,
-				string(adr2.WithChecksum()): 0.2,
-			}},
+			`{"` + string(adr1.WithChecksum()) + `": 0.1,` +
+				`"` + string(adr2.WithChecksum()) + `": 0.2}`,
+		},
 	}
 	var resp Response
 	d1.broadcasted = nil
