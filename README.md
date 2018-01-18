@@ -21,7 +21,7 @@ aidosd is a deamon which acts as bitcoind for adk. For now impletented APIs are 
 
 and `walletnotify` feature.
 
-Refer Bitcoin API Reference (e.g. [here](https://bitcoin.org/en/developer-reference)) for more details
+Refer Bitcoin API Reference (e.g. [here](https://bitcoin.org/en/developer-reference#rpcs)) for more details
 about how to call these APIs.
 
 
