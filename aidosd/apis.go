@@ -448,16 +448,19 @@ func listtransactions(conf *Conf, req *Request, res *Response) error {
 		if err := json.Unmarshal(v, &hs); err != nil {
 			return err
 		}
+		m := make(map[gadk.Trytes]int)
 		txs := make([]gadk.Trytes, len(hs))
 		for i := 0; i < len(hs); i++ {
-			txs[i] = hs[len(hs)-1-i].Hash
+			m[hs[i].Hash] = i
+			txs[i] = hs[i].Hash
 		}
 		resp, err := conf.api.GetTrytes(txs)
 		if err != nil {
 			return err
 		}
 		sort.Slice(resp.Trytes, func(i, j int) bool {
-			return !resp.Trytes[i].Timestamp.Before(resp.Trytes[j].Timestamp)
+			return !(m[resp.Trytes[i].Hash()] < m[resp.Trytes[j].Hash()])
+			// return !resp.Trytes[i].Timestamp.Before(resp.Trytes[j].Timestamp)
 		})
 		ltx = make([]*transaction, 0, num)
 		index := 0

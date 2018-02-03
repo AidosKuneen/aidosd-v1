@@ -24,6 +24,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -60,24 +61,32 @@ loop:
 }
 func (d *dummy1) list(ac string, count, skip int) []*gadk.Transaction {
 	var res []*gadk.Transaction
+	sort.Slice(d.acc2adr[ac], func(i, j int) bool {
+		return strings.Compare(string(d.acc2adr[ac][i]), string(d.acc2adr[ac][j])) > 0
+	})
 	for _, adr := range d.acc2adr[ac] {
 		res = append(res, d.txs[adr]...)
 	}
-	//sort decending order
-	sort.Slice(res, func(i, j int) bool {
-		return !res[i].Timestamp.Before(res[j].Timestamp)
-	})
+	for i := len(res)/2 - 1; i >= 0; i-- {
+		res[i], res[len(res)-1-i] = res[len(res)-1-i], res[i]
+	}
 	return res[skip : skip+count]
 }
 func (d *dummy1) listall() []*gadk.Transaction {
-	var res []*gadk.Transaction
-	for _, txs := range d.txs {
-		res = append(res, txs...)
+	var adrs []gadk.Address
+	for adr := range d.txs {
+		adrs = append(adrs, adr)
 	}
-	//sort decending order
-	sort.Slice(res, func(i, j int) bool {
-		return !res[i].Timestamp.Before(res[j].Timestamp)
+	sort.Slice(adrs, func(i, j int) bool {
+		return strings.Compare(string(adrs[i]), string(adrs[j])) > 0
 	})
+	var res []*gadk.Transaction
+	for _, adr := range adrs {
+		res = append(res, d.txs[adr]...)
+	}
+	for i := len(res)/2 - 1; i >= 0; i-- {
+		res[i], res[len(res)-1-i] = res[len(res)-1-i], res[i]
+	}
 	return res
 }
 
@@ -163,6 +172,9 @@ func (d *dummy1) Balances(adr []gadk.Address) (gadk.Balances, error) {
 func (d *dummy1) FindTransactions(ft *gadk.FindTransactionsRequest) (*gadk.FindTransactionsResponse, error) {
 	var res gadk.FindTransactionsResponse
 	if ft.Addresses != nil {
+		sort.Slice(ft.Addresses, func(i, j int) bool {
+			return strings.Compare(string(ft.Addresses[i]), string(ft.Addresses[j])) > 0
+		})
 		for _, a := range ft.Addresses {
 			if txs, ok := d.txs[a]; ok {
 				for _, tx := range txs {

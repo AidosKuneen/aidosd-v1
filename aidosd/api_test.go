@@ -21,7 +21,6 @@
 package aidosd
 
 import (
-	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -391,7 +390,7 @@ func testlisttransactions(conf *Conf, d1 *dummy1, ac string) {
 		d1.t.Error("invalid number of txs", len(result), ac)
 	}
 	txs := d1.list(ac, count, skip)
-	var last int64 = math.MaxInt64
+	// var last int64 = math.MaxInt64
 	for i, tx := range result {
 		otx := txs[i]
 		if *tx.Account != ac {
@@ -415,10 +414,10 @@ func testlisttransactions(conf *Conf, d1 *dummy1, ac string) {
 		if tx.Time != otx.Timestamp.Unix() {
 			d1.t.Error("invalid time")
 		}
-		if tx.Time > last {
-			d1.t.Error("invalid order")
-		}
-		last = tx.Time
+		// if tx.Time > last {
+		// 	d1.t.Error("invalid order")
+		// }
+		// last = tx.Time
 		if tx.Txid != otx.Bundle {
 			d1.t.Error("invalid txid")
 		}
@@ -480,7 +479,7 @@ func testlisttransactions2(conf *Conf, d1 *dummy1) {
 	if len(result) != 10 {
 		d1.t.Error("invalid number of txs", len(result), len(txs))
 	}
-	var last int64 = math.MaxInt64
+	// var last int64 = math.MaxInt64
 	for i, tx := range result {
 		otx := txs[i]
 		adr, err := tx.Address.ToAddress()
@@ -508,10 +507,10 @@ func testlisttransactions2(conf *Conf, d1 *dummy1) {
 		if tx.Time != otx.Timestamp.Unix() {
 			d1.t.Error("invalid time")
 		}
-		if tx.Time > last {
-			d1.t.Error("invalid order")
-		}
-		last = tx.Time
+		// if tx.Time > last {
+		// 	d1.t.Error("invalid order")
+		// }
+		// last = tx.Time
 		if tx.Txid != otx.Bundle {
 			d1.t.Error("invalid txid")
 		}
