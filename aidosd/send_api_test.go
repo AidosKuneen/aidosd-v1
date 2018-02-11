@@ -232,7 +232,7 @@ func checkResponse(diff map[gadk.Address]int64, acc string,
 	d1 *dummy1, resp *Response, sendto map[gadk.Address]int64) {
 	select {
 	case <-d1.ch:
-	case <-time.After(time.Minute):
+	case <-time.After(10 * time.Minute):
 	}
 	if resp.Error != nil {
 		d1.t.Error(resp.Error)
