@@ -38,7 +38,7 @@ var mutex sync.RWMutex
 func send(acc string, conf *Conf, trs []gadk.Transfer) (gadk.Trytes, error) {
 	var mwm int64 = 18
 	if conf.Testnet {
-		mwm = 3
+		mwm = 15
 	}
 	var result gadk.Trytes
 	err := db.Update(func(tx *bolt.Tx) error {
