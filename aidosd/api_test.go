@@ -30,10 +30,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if _, err := os.Stat("aidosd.conf"); err == nil {
+	if _, err := os.Stat("../aidosd.conf"); err == nil {
 		os.Rename("../aidosd.conf", "../_aidosd.conf_")
 	}
-	err := ioutil.WriteFile("aidosd.conf", []byte(`
+	err := ioutil.WriteFile("../aidosd.conf", []byte(`
 rpcuser=test
 rpcpassword=test
 rpcport=8332
