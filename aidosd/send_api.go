@@ -92,13 +92,24 @@ func sendmany(conf *Conf, req *Request, res *Response) error {
 	if !ok {
 		return errors.New("invalid account")
 	}
-	t, ok := data[1].(string)
-	if !ok {
-		return errors.New("param must be a  map string")
-	}
 	target := make(map[string]float64)
-	if err := json.Unmarshal([]byte(t), &target); err != nil {
-		return err
+	switch data[1].(type) {
+	case string:
+		t := data[1].(string)
+		if err := json.Unmarshal([]byte(t), &target); err != nil {
+			return err
+		}
+	case map[string]interface{}:
+		t := data[1].(map[string]interface{})
+		for k, v := range t {
+			f, ok := v.(float64)
+			if !ok {
+				return errors.New("param must be a  map string")
+			}
+			target[k] = f
+		}
+	default:
+		return errors.New("param must be a  map string")
 	}
 	trs := make([]gadk.Transfer, len(target))
 	i := 0
@@ -109,7 +120,7 @@ func sendmany(conf *Conf, req *Request, res *Response) error {
 			return err
 		}
 		trs[i].Value = int64(v * 100000000)
-		trs[i].Tag = "AIDOSMARKET9A99999999999999"
+		trs[i].Tag = "AIDOSD999999A99999999999999"
 		i++
 	}
 	res.Result, err = send(acc, conf, trs)
@@ -136,7 +147,7 @@ func sendfrom(conf *Conf, req *Request, res *Response) error {
 		return errors.New("invalid account")
 	}
 	var tr gadk.Transfer
-	tr.Tag = "AIDOSMARKET9B99999999999999"
+	tr.Tag = "AIDOSD999999B99999999999999"
 	adrstr, ok := data[1].(string)
 	if !ok {
 		return errors.New("invalid address")
@@ -162,7 +173,7 @@ func sendtoaddress(conf *Conf, req *Request, res *Response) error {
 	}
 	mutex.RUnlock()
 	var tr gadk.Transfer
-	tr.Tag = "AIDOSMARKET9C99999999999999"
+	tr.Tag = "AIDOSD999999C99999999999999"
 
 	data, ok := req.Params.([]interface{})
 	if !ok {
