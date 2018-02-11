@@ -120,19 +120,7 @@ func (p *postparam) post() error {
 }
 
 func TestAPIFee(t *testing.T) {
-	if _, err := os.Stat("aidosd.conf"); err == nil {
-		os.Rename("aidosd.conf", "_aidosd.conf_")
-	}
-	err := ioutil.WriteFile("aidosd.conf", []byte(`
-rpcuser=test
-rpcpassword=test
-rpcport=8332
-aidos_node = http://wallet1.aidoskuneen.com:14266
-testnet = false
-passphrase = true`), 0664)
-	if err != nil {
-		t.Error(err)
-	}
+
 	spawn(t)
 	str := ""
 	setfee := &postparam{
@@ -178,7 +166,26 @@ passphrase = true`), 0664)
 	if err := callStop(); err != nil {
 		t.Error(err)
 	}
+
+}
+
+func TestMain(m *testing.M) {
+	if _, err := os.Stat("aidosd.conf"); err == nil {
+		os.Rename("aidosd.conf", "_aidosd.conf_")
+	}
+	err := ioutil.WriteFile("aidosd.conf", []byte(`
+rpcuser=test
+rpcpassword=test
+rpcport=8332
+aidos_node = http://wallet1.aidoskuneen.com:14266
+testnet = false
+passphrase = true`), 0664)
+	if err != nil {
+		panic(err)
+	}
+	code := m.Run()
 	if _, err := os.Stat("_aidosd.conf_"); err == nil {
 		os.Rename("_aidosd.conf_", "aidosd.conf")
 	}
+	os.Exit(code)
 }
