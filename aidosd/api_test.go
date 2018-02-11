@@ -21,12 +21,34 @@
 package aidosd
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/AidosKuneen/gadk"
 )
+
+func TestMain(m *testing.M) {
+	if _, err := os.Stat("aidosd.conf"); err == nil {
+		os.Rename("../aidosd.conf", "../_aidosd.conf_")
+	}
+	err := ioutil.WriteFile("aidosd.conf", []byte(`
+rpcuser=test
+rpcpassword=test
+rpcport=8332
+aidos_node = http://wallet1.aidoskuneen.com:14266
+testnet = false
+passphrase = true`), 0664)
+	if err != nil {
+		panic(err)
+	}
+	code := m.Run()
+	if _, err := os.Stat("../_aidosd.conf_"); err == nil {
+		os.Rename("../_aidosd.conf_", "../aidosd.conf")
+	}
+	os.Exit(code)
+}
 
 func prepareTest(t *testing.T) *Conf {
 	if db != nil {
