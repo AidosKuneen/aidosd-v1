@@ -123,14 +123,13 @@ func TestAPIFee(t *testing.T) {
 	if _, err := os.Stat("aidosd.conf"); err == nil {
 		os.Rename("aidosd.conf", "_aidosd.conf_")
 	}
-	ioutil.WriteFile("aidosd.conf", `
-		rpcuser=test
+	ioutil.WriteFile("aidosd.conf", []byte(`
+rpcuser=test
 rpcpassword=test
 rpcport=8332
 aidos_node = http://wallet1.aidoskuneen.com:14266
 testnet = false
-passphrase = true
-		`, 0664)
+passphrase = true`), 0664)
 
 	spawn(t)
 	str := ""
