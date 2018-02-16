@@ -62,7 +62,7 @@ func send(acc string, conf *Conf, trs []gadk.Transfer) (gadk.Trytes, error) {
 		if ac == nil {
 			return errors.New("accout not found")
 		}
-		bhash, err := Send(conf.api, ac, mwm, trs)
+		bhash, err := Send(conf, ac, mwm, trs)
 		if err == nil {
 			if errr := putAccount(tx, ac); errr != nil {
 				return errr

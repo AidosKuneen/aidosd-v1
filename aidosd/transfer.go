@@ -251,10 +251,10 @@ var powMutex = sync.Mutex{}
 //Send sends token.
 //if you need to pow locally, you must specifiy pow func.
 //otherwirse this calls AttachToMesh API.
-func Send(api apis, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes, error) {
+func Send(conf *Conf, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes, error) {
 	bals := make([]Balance, len(ac.Balances))
 	copy(bals, ac.Balances)
-	bd, err := PrepareTransfers(api, ac, trs)
+	bd, err := PrepareTransfers(conf.api, ac, trs)
 	if err != nil {
 		ac.Balances = bals
 		return "", err
@@ -266,7 +266,7 @@ func Send(api apis, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes, e
 		log.Println("starting PoW...")
 		ts := []gadk.Transaction(bd)
 		for i := 0; ; i++ {
-			err = PowTrytes(api, gadk.Depth, ts, mwm, pow)
+			err = PowTrytes(conf.api, gadk.Depth, ts, mwm, pow)
 			if err == nil {
 				break
 			}
@@ -276,12 +276,12 @@ func Send(api apis, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes, e
 		}
 		for i := 0; ; i++ {
 			var bd2 gadk.Bundle
-			if errr := broadcast(api, ts); errr == nil {
+			if errr := broadcast(conf.api, ts); errr == nil {
 				bd2 = gadk.Bundle(ts)
 				log.Println("finish sending. bundle hash=", bd2.Hash())
 				break
 			}
-			if _, ok := api.(*gadk.API); ok {
+			if _, ok := conf.api.(*gadk.API); ok && !conf.Testnet {
 				for _, w := range []string{"http://wallet1.aidoskuneen.com:14266", "http://wallet2.aidoskuneen.com:14266"} {
 					api2 := gadk.NewAPI(w, nil)
 					if err := api2.BroadcastTransactions(ts); err != nil {
