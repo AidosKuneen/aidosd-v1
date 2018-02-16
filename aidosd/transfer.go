@@ -281,6 +281,14 @@ func Send(api apis, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes, e
 				log.Println("finish sending. bundle hash=", bd2.Hash())
 				break
 			}
+			if _, ok := api.(*gadk.API); ok {
+				for _, w := range []string{"http://wallet1.aidoskuneen.com:14266", "http://wallet2.aidoskuneen.com:14266"} {
+					api2 := gadk.NewAPI(w, nil)
+					if err := api2.BroadcastTransactions(ts); err != nil {
+						log.Println(err)
+					}
+				}
+			}
 			log.Println("failed to send ", bd2)
 			log.Println(err, " waiting 3 minuites ", i)
 			time.Sleep(3 * time.Minute)
