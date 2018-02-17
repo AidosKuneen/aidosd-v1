@@ -1,7 +1,7 @@
 language: go
 sudo: required
 go:
-- 1.10.x
+- master
 env:
   global:
   - FILE_NAME: aidosd_${TRAVIS_TAG}_linux_amd64
