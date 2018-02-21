@@ -6,7 +6,6 @@ go:
 
 env:
   global:
-  - CGO_CPPFLAGS_ALLOW: "-msse2"
   - FILE_NAME: aidosd_${TRAVIS_TAG}_linux_amd64
   
 before_install:
