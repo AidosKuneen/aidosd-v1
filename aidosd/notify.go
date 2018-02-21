@@ -72,7 +72,8 @@ func compareHashes(api apis, tx *bolt.Tx, hashes []gadk.Trytes) ([]gadk.Trytes, 
 		}
 		inc, err := api.GetLatestInclusion([]gadk.Trytes{h.Hash})
 		if err != nil {
-			return nil, nil, err
+			log.Println(err)
+			continue
 		}
 		if len(inc) > 0 && inc[0] {
 			confirmed = append(confirmed, h.Hash)
