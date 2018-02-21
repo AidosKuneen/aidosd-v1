@@ -6,7 +6,6 @@ go:
 env:
   global:
   - FILE_NAME: aidosd_${TRAVIS_TAG}_linux_amd64
-  - CGO_CPPFLAGS_ALLOW: "-msse2"
 before_install:
 - go get -u github.com/axw/gocov/gocov
 - go get -u github.com/alecthomas/gometalinter
