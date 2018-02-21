@@ -1,7 +1,13 @@
 language: go
 sudo: required
+
 go:
-- 1.10.x
+- 1.x
+
+env:
+  global:
+  - CGO_CPPFLAGS_ALLOW: "-msse2"
+  
 
 env:
   global:
