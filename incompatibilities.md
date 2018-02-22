@@ -136,6 +136,12 @@
 
 ###  `gettransaction`
 
+Note:
+
+Elements in `details` may be changed for every API calls
+due to non-identicality of bundle hashes described above.
+
+
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
 | TXID      | bundle hash| 
