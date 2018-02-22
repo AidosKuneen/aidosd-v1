@@ -335,21 +335,17 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 	var amount int64
 	nconf := 0
 	var dt *transaction
+	indice := make(map[int64]struct{})
 	err = db.View(func(tx *bolt.Tx) error {
 		for _, tr := range resp.Trytes {
 			dt2, errr := getTransaction(tx, conf, &tr)
 			if errr != nil {
 				return err
 			}
-			if dt2.Amount == 0 || dt2.Account == nil {
+			if _, exist := indice[tr.CurrentIndex]; exist {
 				continue
 			}
-			if nconf > 0 && dt.Confirmations == 0 {
-				continue
-			}
-			if nconf == 0 && dt.Confirmations != 0 {
-				detailss = nil
-			}
+			indice[tr.CurrentIndex] = struct{}{}
 			dt = dt2
 			d := &details{
 				Account:   *dt.Account,
