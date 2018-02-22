@@ -344,6 +344,12 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 			if dt2.Amount == 0 || dt2.Account == nil {
 				continue
 			}
+			if nconf > 0 && dt.Confirmations == 0 {
+				continue
+			}
+			if nconf == 0 && dt.Confirmations != 0 {
+				detailss = nil
+			}
 			dt = dt2
 			d := &details{
 				Account:   *dt.Account,
