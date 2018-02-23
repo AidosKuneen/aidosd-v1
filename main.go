@@ -143,7 +143,9 @@ func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
 	if !conf.Testnet {
 		go func() {
 			for {
-				aidos.Recast(conf.Node)
+				if err := aidos.Recast(conf.Node); err != nil {
+					log.Println(err)
+				}
 				time.Sleep(30 * time.Minute)
 			}
 		}()

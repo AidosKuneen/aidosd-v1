@@ -447,9 +447,9 @@ func listtransactions(conf *Conf, req *Request, res *Response) error {
 			}
 			inc := target.Confirmed
 			if !inc {
-				_, hs, err := findTX(tx, tr.Bundle)
-				if err != nil {
-					return err
+				_, hs, err2 := findTX(tx, tr.Bundle)
+				if err2 != nil {
+					return err2
 				}
 				for _, h := range hs {
 					if h.Confirmed {
