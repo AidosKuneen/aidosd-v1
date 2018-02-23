@@ -173,6 +173,7 @@ func UpdateTXs(conf *Conf) error {
 		if err != nil {
 			return err
 		}
+		var req []gadk.Trytes
 		for _, h := range hs {
 			_, err := getTX(tx, h.Hash)
 			if err != errTxNotFound {
@@ -181,11 +182,14 @@ func UpdateTXs(conf *Conf) error {
 				}
 				continue
 			}
-			resp, err := conf.api.GetTrytes([]gadk.Trytes{h.Hash})
-			if err != nil {
-				return err
-			}
-			if err := putTX(tx, &resp.Trytes[0]); err != nil {
+			req = append(req, h.Hash)
+		}
+		resp, err := conf.api.GetTrytes(req)
+		if err != nil {
+			return err
+		}
+		for _, h := range resp.Trytes {
+			if err := putTX(tx, &h); err != nil {
 				return err
 			}
 		}
