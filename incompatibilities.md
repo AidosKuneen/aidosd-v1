@@ -1,10 +1,6 @@
 # Incompatibilities
 
 ## Common Differences with Bitcon
-* `Bundle Hash` in ADK is used as `Transaction ID` in Bitcoin, but `Bundle Hash` is _NOT_ identical and
-  there can be multiple bundles with a same bundle hash, i.e. one of bundles with a same hash can be unconfirmed and antoher one can be confirmed.
-  **_You must check all transactions in a bunldle_** 
-  and don't judge confirmation of all transactionsins in a bundle by  checking only one of a transaction in a bundle.
 * These APIs don't have full features, these are just for a few exchange programs.
 * Error codes and error string from these commands are not same as ones from bitcoin.
 * Deposit addresses must be changed per every deposits e.g. by calling `getnewaddress` on your exchange system by your own. This library doesn't care about the changing addresses.
@@ -136,12 +132,6 @@
 
 ###  `gettransaction`
 
-Note:
-
-Elements in `details` may be changed for every API calls
-due to non-identicality of bundle hashes described above.
-
-
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
 | TXID      | bundle hash| 
@@ -220,7 +210,7 @@ due to non-identicality of bundle hashes described above.
 | → →account       | ---|  
 |  → →address      | ---|  
 |  → →category      | always "send" or "receive" |  
-|  → →amount 	     | ---|  
+|  → →amount 	     | can be 0|  
 |  → →label     | always doesn't exist|  
 | → →vout       | always 0|  
 |→ →fee       | always 0|  

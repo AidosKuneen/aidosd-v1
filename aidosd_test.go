@@ -32,7 +32,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AidosKuneen/aidosd/aidosd"
+	"github.com/AidosKuneen/aidosd/aidos"
 )
 
 func spawn(t *testing.T) string {
@@ -140,9 +140,9 @@ func TestAPIFee(t *testing.T) {
 	user = "test"
 	pwd = "test"
 	resp := &struct {
-		Result bool        `json:"result"`
-		Error  *aidosd.Err `json:"error"`
-		ID     string      `json:"id"`
+		Result bool       `json:"result"`
+		Error  *aidos.Err `json:"error"`
+		ID     string     `json:"id"`
 	}{}
 	setfee2 := &postparam{
 		body: `{"jsonrpc": "1.0", "id":"curltest", "method": "settxfee", "params": [0.00001] }`,

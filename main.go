@@ -26,12 +26,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/exec"
+	"runtime"
 	"syscall"
 	"time"
 
-	"github.com/AidosKuneen/aidosd/aidosd"
+	"github.com/AidosKuneen/aidosd/aidos"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
 	"golang.org/x/crypto/ssh/terminal"
@@ -48,28 +50,40 @@ const (
 var Version = "unstable"
 
 func main() {
-	aidosd.SetLog(false)
+	aidos.SetLog(false)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "aidosd version %v\n", Version)
 		fmt.Fprintf(os.Stderr, "%s <options>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-	var cmd string
-	flag.StringVar(&cmd, "cmd", "start", "command")
+	var child, start, status, stop bool
+	flag.BoolVar(&child, "child", false, "start as child")
+	flag.BoolVar(&start, "start", false, "start aidosd")
+	flag.BoolVar(&status, "status", false, "show status")
+	flag.BoolVar(&stop, "stop", false, "stop  aidosd")
 	flag.Parse()
 
-	switch cmd {
-	case "child":
+	if flag.NFlag() > 1 || flag.NArg() > 0 {
+		flag.Usage()
+		return
+	}
+	if flag.NFlag() == 0 {
+		start = true
+	}
+
+	if child {
 		if err := runChild(); err != nil {
 			panic(err)
 		}
-	case "start":
+	}
+	if start {
 		passwd := getPasswd()
 		if err := runParent(passwd, os.Args...); err != nil {
 			panic(err)
 		}
 		fmt.Println("aidosd is started")
-	case "status":
+	}
+	if status {
 		stat, err := callStatus()
 		if err != nil {
 			fmt.Println("aidosd is not running")
@@ -83,13 +97,17 @@ func main() {
 		default:
 			fmt.Println("unknown status")
 		}
-	case "stop":
+	}
+	if stop {
+		stat, err := callStatus()
+		if err != nil || stat == stopping {
+			fmt.Println("aidosd is not running")
+			return
+		}
 		if err := callStop(); err != nil {
 			panic(err)
 		}
 		fmt.Println("aidosd has stopped")
-	default:
-		fmt.Println("unknown cmd")
 	}
 }
 
@@ -110,22 +128,30 @@ type Control struct {
 
 //Start starts aidosd with password.
 func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
-	conf, err := aidosd.Prepare("aidosd.conf", *args)
+	conf, err := aidos.Prepare("aidosd.conf", *args)
 	if err != nil {
 		return err
 	}
-	go func() {
-		for {
-			if _, err := aidosd.Walletnotify(conf); err != nil {
-				log.Print(err)
+	// go func() {
+	// 	for {
+	// 		if _, err := aidos.Walletnotify(conf); err != nil {
+	// 			log.Print(err)
+	// 		}
+	// 		time.Sleep(time.Minute)
+	// 	}
+	// }()
+	if !conf.Testnet {
+		go func() {
+			for {
+				aidos.Recast(conf.Node)
+				time.Sleep(30 * time.Minute)
 			}
-			time.Sleep(time.Minute)
-		}
-	}()
+		}()
+	}
 	fmt.Println("starting the aidosd server at port http://0.0.0.0:" + conf.RPCPort)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		aidosd.Handle(conf, w, r)
+		aidos.Handle(conf, w, r)
 	})
 	go func() {
 		if err := http.ListenAndServe("0.0.0.0:"+conf.RPCPort, mux); err != nil {
@@ -138,7 +164,7 @@ func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
 
 //Stop stops aidosd.
 func (c *Control) Stop(r *http.Request, args *struct{}, reply *struct{}) error {
-	aidosd.Exit()
+	aidos.Exit()
 	c.status = stopping
 	return nil
 }
@@ -175,7 +201,7 @@ func call(method string, args interface{}, ret interface{}) error {
 }
 
 func runParent(passwd []byte, oargs ...string) error {
-	args := []string{"--cmd", "child"}
+	args := []string{"-child"}
 	args = append(args, oargs[1:]...)
 	cmd := exec.Command(oargs[0], args...)
 	cmd.Stdout = os.Stdout
@@ -200,6 +226,11 @@ func getPasswd() []byte {
 }
 
 func runChild() error {
+	runtime.SetBlockProfileRate(1)
+	go func() {
+		log.Println(http.ListenAndServe("127.0.0.1:6060", nil))
+	}()
+
 	s := rpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")
 	if err := s.RegisterService(new(Control), ""); err != nil {

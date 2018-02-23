@@ -50,7 +50,7 @@ Dependencies:
 	$ cd src
 	$ go get -u github.com/AidosKuneen/aidosd
 	$ cd github.com/AidosKuneen/aidosd
-	$ go build -o adkd
+	$ go build
 ```
 
 # Configuration
@@ -95,14 +95,14 @@ When you run `aidosd` first time, you need to input a password to encrypt seeds 
 If you run `aidosd` 2nd time or later, you need to input the password to decrypt seeds.
 
 ```
-$ ./adkd
+$ ./aidosd
 enter password: <input your password> 
 ```
 
 Then `aidosd` starts to run in background.
 
 ```
-$ ./adkd
+$ ./aidosd
 Enter password: 
 starting the aidosd server at port http://0.0.0.0:8332
 aidosd is started
@@ -116,7 +116,7 @@ Please remove the database in this case, i.e. remove `aidosd.db` .
 To know if it is still running, run:
 
 ```
-	$ ./adkd -cmd status
+	$ ./aidosd status
 ```
 
 This prints the status ("running" or "stopped").
@@ -125,5 +125,5 @@ This prints the status ("running" or "stopped").
 When you want to stop:
 
 ```
-	$ ./adkd -cmd stop
+	$ ./aidosd stop
 ```
