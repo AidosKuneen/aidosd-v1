@@ -184,6 +184,9 @@ func UpdateTXs(conf *Conf) error {
 			}
 			req = append(req, h.Hash)
 		}
+		if len(req) == 0 {
+			return nil
+		}
 		resp, err := conf.api.GetTrytes(req)
 		if err != nil {
 			return err
