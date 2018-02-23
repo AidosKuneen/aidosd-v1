@@ -132,14 +132,14 @@ func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
 	if err != nil {
 		return err
 	}
-	// go func() {
-	// 	for {
-	// 		if _, err := aidos.Walletnotify(conf); err != nil {
-	// 			log.Print(err)
-	// 		}
-	// 		time.Sleep(time.Minute)
-	// 	}
-	// }()
+	go func() {
+		for {
+			if _, err := aidos.Walletnotify(conf); err != nil {
+				log.Print(err)
+			}
+			time.Sleep(time.Minute)
+		}
+	}()
 	if !conf.Testnet {
 		go func() {
 			for {
