@@ -148,6 +148,9 @@ func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
 			}
 		}()
 	}
+	if err := aidos.UpdateTXs(conf); err != nil {
+		log.Fatal(err)
+	}
 	fmt.Println("starting the aidosd server at port http://0.0.0.0:" + conf.RPCPort)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

@@ -22,14 +22,18 @@ package aidos
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/AidosKuneen/gadk"
 )
 
 func TestMain(m *testing.M) {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 	if _, err := os.Stat("../aidosd.conf"); err == nil {
 		os.Rename("../aidosd.conf", "../_aidosd.conf_")
 	}
@@ -96,6 +100,9 @@ func TestAPI(t *testing.T) {
 		testlisttransactions(conf, d1, ac)
 	}
 	d1.isConf = true
+	if _, err := Walletnotify(conf); err != nil {
+		t.Error(err)
+	}
 	for ac := range d1.acc2adr {
 		testlisttransactions(conf, d1, ac)
 	}
@@ -244,6 +251,7 @@ func testgettransaction(conf *Conf, d1 *dummy1) {
 		Method:  "gettransaction",
 		Params:  []interface{}{string(d1.bundle.Hash())},
 	}
+	log.Println(d1.bundle.Hash())
 	var resp Response
 	if err := gettransaction(conf, req, &resp); err != nil {
 		d1.t.Error(err)
@@ -255,10 +263,10 @@ func testgettransaction(conf *Conf, d1 *dummy1) {
 	if !ok {
 		d1.t.Error("result must be tx")
 	}
-	txs, amount := d1.list4Bundle()
+	amount := d1.bundleAmount()
 
 	if tx.Amount != amount {
-		d1.t.Error("amount is incorrect")
+		d1.t.Error("amount is incorrect", tx.Amount, "should be", amount)
 	}
 	if tx.Fee != 0 ||
 		len(tx.Walletconflicts) != 0 || tx.BIP125Replaceable != "no" || tx.Hex != "" {
@@ -280,10 +288,10 @@ func testgettransaction(conf *Conf, d1 *dummy1) {
 		}
 	}
 	if tx.Txid != d1.bundle.Hash() {
-		d1.t.Error("invalid txid")
+		d1.t.Error("invalid txid", tx.Txid, "should be", d1.bundle.Hash())
 	}
 	ok = false
-	for _, txx := range txs {
+	for _, txx := range d1.bundle {
 		if tx.Time == txx.Timestamp.Unix() {
 			ok = true
 		}
@@ -294,12 +302,18 @@ func testgettransaction(conf *Conf, d1 *dummy1) {
 	if tx.Time != tx.TimeReceived {
 		d1.t.Error("invalid timereceived")
 	}
-	if len(txs) != len(tx.Details) {
+	if len(d1.bundle) != len(tx.Details) {
 		d1.t.Error("invalid number of length ")
 	}
+	sort.Slice(d1.bundle, func(i, j int) bool {
+		return d1.bundle[i].Value < d1.bundle[j].Value
+	})
+	sort.Slice(tx.Details, func(i, j int) bool {
+		return tx.Details[i].Amount < tx.Details[j].Amount
+	})
 	for i, d := range tx.Details {
-		if d.Address != txs[i].Address.WithChecksum() {
-			d1.t.Error("invalid address", d.Address, txs[i].Address.WithChecksum())
+		if d.Address != d1.bundle[i].Address.WithChecksum() {
+			d1.t.Error("invalid address", d.Address, d1.bundle[i].Address.WithChecksum())
 		}
 		adr, err := d.Address.ToAddress()
 		if err != nil {
@@ -315,11 +329,8 @@ func testgettransaction(conf *Conf, d1 *dummy1) {
 		if d.Amount < 0 && d.Category != "send" {
 			d1.t.Error("invalid category")
 		}
-		if d.Amount == 0 {
-			d1.t.Error("invalid amount")
-		}
-		if d.Amount != float64(txs[i].Value)/100000000 {
-			d1.t.Error("invalid amount", d.Amount, txs[i].Value, adr)
+		if d.Amount != float64(d1.bundle[i].Value)/100000000 {
+			d1.t.Error("invalid amount", d.Amount, d1.bundle[i].Value, adr)
 		}
 		if d.Fee != 0 {
 			d1.t.Error("invalid dummy params")
@@ -444,14 +455,14 @@ func testlisttransactions(conf *Conf, d1 *dummy1, ac string) {
 		// }
 		// last = tx.Time
 		if tx.Txid != otx.Bundle {
-			d1.t.Error("invalid txid")
+			d1.t.Error("invalid txid,", tx.Txid, "should be", otx.Bundle)
 		}
 		conf := 100000
 		if !d1.isConf {
 			conf = 0
 		}
 		if tx.Confirmations != conf {
-			d1.t.Error("invalid confirmations")
+			d1.t.Error("invalid confirmations", tx.Confirmations, "should be", conf)
 		}
 		if tx.Vout != 0 || tx.Fee != 0 ||
 			len(tx.Walletconflicts) != 0 || tx.BIP125Replaceable != "no" {

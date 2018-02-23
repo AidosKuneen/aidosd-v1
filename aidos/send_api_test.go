@@ -194,6 +194,7 @@ func testsendtoaddress(conf *Conf, d1 *dummy1) {
 	if err != nil {
 		d1.t.Error(err)
 	}
+
 	diff := getDiff(acc0, acc1)
 	checkResponse(diff, "*", d1, &resp, map[gadk.Address]int64{
 		adr1: int64(0.1 * 100000000),
@@ -293,7 +294,7 @@ func checkResponse(diff map[gadk.Address]int64, acc string,
 				d1.t.Error("invalid send address")
 			}
 			if v != -tx.Value {
-				d1.t.Error("invalid send address", v, tx.Value, tx.Address)
+				d1.t.Error("invalid send amount", v, tx.Value, tx.Address)
 			}
 			ac, ok := d1.adr2acc[tx.Address]
 			if !ok {

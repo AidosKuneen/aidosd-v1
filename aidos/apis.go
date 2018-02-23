@@ -21,9 +21,7 @@
 package aidos
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
@@ -311,39 +309,26 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 	default:
 		return errors.New("invalid params")
 	}
-	bundle := gadk.Trytes(bundlestr)
-	ft := gadk.FindTransactionsRequest{
-		Bundles: []gadk.Trytes{bundle},
-	}
-	r, err := conf.api.FindTransactions(&ft)
-	if err != nil {
-		return err
-	}
-	if len(r.Hashes) == 0 {
-		return errors.New("bundle not found")
-	}
-	resp, err := conf.api.GetTrytes(r.Hashes)
-	if err != nil {
-		return err
-	}
-	if len(resp.Trytes) != len(r.Hashes) {
-		return fmt.Errorf("cannot get all txs %d/%d", len(r.Hashes), len(resp.Trytes))
-	}
 
-	detailss := make([]*details, 0, len(r.Hashes))
 	var amount int64
 	nconf := 0
 	var dt *transaction
-	indice := make(map[int64]struct{})
-	err = db.View(func(tx *bolt.Tx) error {
-		for _, tr := range resp.Trytes {
-			incs, err := conf.api.GetLatestInclusion([]gadk.Trytes{tr.Hash()})
-			if err != nil {
-				return err
-			}
-			dt2, errr := getTransaction(tx, conf, &tr, incs[0])
+	var detailss []*details
+	bundle := gadk.Trytes(bundlestr)
+	err := db.View(func(tx *bolt.Tx) error {
+		trs, hs, err := findTX(tx, bundle)
+		if err != nil {
+			return err
+		}
+		if len(trs) == 0 {
+			return errors.New("bundle not found")
+		}
+		detailss = make([]*details, 0, len(trs))
+		indice := make(map[int64]struct{})
+		for i, tr := range trs {
+			dt2, errr := getTransaction(tx, conf, tr, hs[i].Confirmed)
 			if errr != nil {
-				return err
+				return errr
 			}
 			if _, exist := indice[tr.CurrentIndex]; exist {
 				continue
@@ -446,52 +431,42 @@ func listtransactions(conf *Conf, req *Request, res *Response) error {
 	}
 	var ltx []*transaction
 	err := db.View(func(tx *bolt.Tx) error {
-		var hs []*txstate
-		b := tx.Bucket([]byte("hashes"))
-		if b == nil {
-			return nil
-		}
-		v := b.Get([]byte("hashes"))
-		if err := json.Unmarshal(v, &hs); err != nil {
+		hs, err := getHashes(tx)
+		if err != nil {
 			return err
 		}
-		ni, err2 := conf.api.GetNodeInfo()
-		if err2 != nil {
-			return err2
+		if len(hs) == 0 {
+			return nil
 		}
-		for i := skip; i < len(hs) && len(ltx) < skip+num; i++ {
-			//for replay bundle(i.e. multiple bundles with a same hash)
-			resp, err := conf.api.GetTrytes([]gadk.Trytes{hs[i].Hash})
+		for skipped, i := 0, 0; i < len(hs) && len(ltx) < num; i++ {
+			//for replay bundles(i.e. multiple bundles with a same hash)
+			target := hs[len(hs)-1-i]
+			tr, err := getTX(tx, target.Hash)
 			if err != nil {
 				continue
 			}
-			inc := hs[i].Confirmed
+			inc := target.Confirmed
 			if !inc {
-				ft := gadk.FindTransactionsRequest{
-					Bundles: []gadk.Trytes{resp.Trytes[0].Bundle},
-				}
-				r, err := conf.api.FindTransactions(&ft)
+				_, hs, err := findTX(tx, tr.Bundle)
 				if err != nil {
 					return err
 				}
-				incresp, err := conf.api.GetInclusionStates(r.Hashes, []gadk.Trytes{ni.LatestMilestone})
-				if err != nil {
-					return err
-				}
-				for _, i := range incresp.States {
-					if i {
+				for _, h := range hs {
+					if h.Confirmed {
 						inc = true
 					}
 				}
 			}
-			dt, err := getTransaction(tx, conf, &resp.Trytes[0], inc)
+			dt, err := getTransaction(tx, conf, tr, inc)
 			if err != nil {
 				return err
 			}
 			if acc != "*" && *dt.Account != acc {
 				continue
 			}
-			ltx = append(ltx, dt)
+			if skipped++; skipped > skip {
+				ltx = append(ltx, dt)
+			}
 		}
 		return nil
 	})

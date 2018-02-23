@@ -46,18 +46,12 @@ type dummy1 struct {
 	stored      []gadk.Transaction
 }
 
-func (d *dummy1) list4Bundle() ([]gadk.Transaction, float64) {
-	var res []gadk.Transaction
+func (d *dummy1) bundleAmount() float64 {
 	var amount int64
-loop:
 	for _, tx := range d.bundle {
-		if _, ok := d.adr2acc[tx.Address]; !ok {
-			continue loop
-		}
-		res = append(res, tx)
 		amount += tx.Value
 	}
-	return res, float64(amount) / 100000000
+	return float64(amount) / 100000000
 }
 func (d *dummy1) list(ac string, count, skip int) []*gadk.Transaction {
 	var res []*gadk.Transaction
@@ -139,19 +133,24 @@ func (d *dummy1) setupTXs() {
 	}
 	for i := 0; i < 5; i++ {
 		tx := gadk.Transaction{
-			Address:   gadk.EmptyAddress,
-			Value:     int64(rand.Int31() - math.MaxInt32/2),
-			Timestamp: time.Now().Add(time.Duration(-rand.Int31()%100000) * time.Second),
+			Address:      gadk.EmptyAddress,
+			Value:        int64(rand.Int31() - math.MaxInt32/2),
+			Timestamp:    time.Now().Add(time.Duration(-rand.Int31()%100000) * time.Second),
+			CurrentIndex: int64(i),
 		}
-		if i < 2 {
-			for tx.Address = range d.adr2acc {
-			}
+		for tx.Address = range d.adr2acc {
 		}
 		if i == 3 {
 			tx.Value = 0
 		}
+		d.vals[tx.Address] += tx.Value
 		d.bundle = append(d.bundle, tx)
 	}
+
+	for i := range d.bundle {
+		d.bundle[i].Bundle = d.bundle.Hash()
+	}
+
 }
 
 func (d *dummy1) Balances(adr []gadk.Address) (gadk.Balances, error) {
@@ -172,27 +171,18 @@ func (d *dummy1) Balances(adr []gadk.Address) (gadk.Balances, error) {
 func (d *dummy1) FindTransactions(ft *gadk.FindTransactionsRequest) (*gadk.FindTransactionsResponse, error) {
 	var res gadk.FindTransactionsResponse
 	if ft.Addresses != nil {
+		for _, tx := range d.bundle {
+			res.Hashes = append(res.Hashes, tx.Hash())
+		}
 		sort.Slice(ft.Addresses, func(i, j int) bool {
 			return strings.Compare(string(ft.Addresses[i]), string(ft.Addresses[j])) > 0
 		})
 		for _, a := range ft.Addresses {
-			if txs, ok := d.txs[a]; ok {
-				for _, tx := range txs {
-					res.Hashes = append(res.Hashes, tx.Hash())
-				}
+			for _, tx := range d.txs[a] {
+				res.Hashes = append(res.Hashes, tx.Hash())
 			}
 		}
-	}
-	if ft.Bundles != nil {
-		if len(ft.Bundles) != 1 {
-			d.t.Error("len of bundles must be 1")
-		}
-		if ft.Bundles[0] != d.bundle.Hash() {
-			d.t.Error(" bundles must be ", d.bundle.Hash(), "but", ft.Bundles[0])
-		}
-		for _, tx := range d.bundle {
-			res.Hashes = append(res.Hashes, tx.Hash())
-		}
+
 	}
 	return &res, nil
 }
@@ -247,18 +237,18 @@ func (d *dummy1) StoreTransactions(trytes []gadk.Transaction) error {
 	d.stored = trytes
 	return nil
 }
-func (d *dummy1) GetLatestInclusion(hash []gadk.Trytes) ([]bool, error) {
-	r := make([]bool, len(hash))
+func (d *dummy1) GetInclusionStates(tx []gadk.Trytes, tips []gadk.Trytes) (*gadk.GetInclusionStatesResponse, error) {
+	ret := make([]bool, len(tx))
 	if d.isConf {
-		for i := range r {
-			r[i] = true
+		for i := range ret {
+			ret[i] = true
 		}
 	}
-	return r, nil
-}
-func (d *dummy1) GetInclusionStates(tx []gadk.Trytes, tips []gadk.Trytes) (*gadk.GetInclusionStatesResponse, error) {
-	return nil, nil
+
+	return &gadk.GetInclusionStatesResponse{
+		States: ret,
+	}, nil
 }
 func (d *dummy1) GetNodeInfo() (*gadk.GetNodeInfoResponse, error) {
-	return nil, nil
+	return &gadk.GetNodeInfoResponse{}, nil
 }

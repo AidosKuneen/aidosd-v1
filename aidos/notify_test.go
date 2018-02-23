@@ -38,7 +38,7 @@ func TestNotify1(t *testing.T) {
 	}
 	d1 := newdummy(acc, t)
 	conf.api = d1
-	if err := check(conf); err != nil {
+	if err := check(conf, d1); err != nil {
 		t.Error(err)
 	}
 
@@ -51,7 +51,7 @@ func TestNotify1(t *testing.T) {
 	}
 
 	d1.isConf = true
-	if err = check(conf); err != nil {
+	if err = check(conf, d1); err != nil {
 		t.Error(err)
 	}
 
@@ -72,12 +72,12 @@ func TestNotify2(t *testing.T) {
 	}
 	d1 := newdummy(acc, t)
 	conf.api = d1
-	if err := check(conf); err != nil {
+	if err := check(conf, d1); err != nil {
 		t.Error(err)
 	}
 	d1.isConf = true
 	conf.api = d1
-	if err := check(conf); err != nil {
+	if err := check(conf, d1); err != nil {
 		t.Error(err)
 	}
 
@@ -90,23 +90,27 @@ func TestNotify2(t *testing.T) {
 	}
 }
 
-func check(conf *Conf) error {
+func check(conf *Conf, d1 *dummy1) error {
 	outs, err := Walletnotify(conf)
 	if err != nil {
 		return err
 	}
-	if len(outs) != 3 {
+	if len(outs) != 4 {
 		log.Println(len(outs))
 		return errors.New("invalid out1")
 	}
 	sort.Slice(outs, func(i, j int) bool {
-		return outs[i][1] < outs[j][1]
+		return strings.Compare(outs[i], outs[j]) < 0
 	})
 	res := []string{
+		string(d1.bundle.Hash()),
 		string("BA" + gadk.EmptyHash[2:]),
 		string("BB" + gadk.EmptyHash[2:]),
 		string("BC" + gadk.EmptyHash[2:]),
 	}
+	sort.Slice(res, func(i, j int) bool {
+		return strings.Compare(res[i], res[j]) < 0
+	})
 	for i, o := range outs {
 		o = strings.TrimSpace(o)
 		if o != res[i] {

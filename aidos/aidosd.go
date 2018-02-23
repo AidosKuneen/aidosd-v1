@@ -50,7 +50,6 @@ type apis interface {
 	GetTransactionsToApprove(depth int64) (*gadk.GetTransactionsToApproveResponse, error)
 	BroadcastTransactions(trytes []gadk.Transaction) error
 	StoreTransactions(trytes []gadk.Transaction) error
-	GetLatestInclusion([]gadk.Trytes) ([]bool, error)
 	GetNodeInfo() (*gadk.GetNodeInfoResponse, error)
 	GetInclusionStates([]gadk.Trytes, []gadk.Trytes) (*gadk.GetInclusionStatesResponse, error)
 }

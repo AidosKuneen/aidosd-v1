@@ -21,7 +21,6 @@
 package aidos
 
 import (
-	"encoding/json"
 	"log"
 	"os/exec"
 	"strings"
@@ -31,26 +30,15 @@ import (
 	shellwords "github.com/mattn/go-shellwords"
 )
 
-type txstate struct {
-	Hash      gadk.Trytes
-	Confirmed bool
-}
-
 func compareHashes(api apis, tx *bolt.Tx, hashes []gadk.Trytes) ([]gadk.Trytes, []gadk.Trytes, error) {
-	var hs []*txstate
-	var news []*txstate
 	var confirmed []gadk.Trytes
 	//search new tx
-	b := tx.Bucket([]byte("hashes"))
-	if b != nil {
-		v := b.Get([]byte("hashes"))
-		if v != nil {
-			if err := json.Unmarshal(v, &hs); err != nil {
-				return nil, nil, err
-			}
-		}
+	hs, err := getHashes(tx)
+	if err != nil {
+		return nil, nil, err
 	}
-	news = make([]*txstate, 0, len(hashes))
+	news := make([]*txstate, 0, len(hashes))
+	nhashes := make([]gadk.Trytes, 0, len(hashes))
 	for _, h1 := range hashes {
 		exist := false
 		for _, h2 := range hs {
@@ -61,35 +49,42 @@ func compareHashes(api apis, tx *bolt.Tx, hashes []gadk.Trytes) ([]gadk.Trytes, 
 		}
 		if !exist {
 			news = append(news, &txstate{Hash: h1})
+			nhashes = append(nhashes, h1)
 		}
 	}
+	trs, err := api.GetTrytes(nhashes)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, tr := range trs.Trytes {
+		if err := putTX(tx, &tr); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	//search newly confirmed tx
 	confirmed = make([]gadk.Trytes, 0, len(hs))
 	hs = append(hs, news...)
+	ni, err2 := api.GetNodeInfo()
+	if err2 != nil {
+		return nil, nil, err2
+	}
 	for _, h := range hs {
 		if h.Confirmed {
 			continue
 		}
-		inc, err := api.GetLatestInclusion([]gadk.Trytes{h.Hash})
+		inc, err := api.GetInclusionStates([]gadk.Trytes{h.Hash}, []gadk.Trytes{ni.LatestMilestone})
 		if err != nil {
 			log.Println(err)
 			continue
 		}
-		if len(inc) > 0 && inc[0] {
+		if len(inc.States) > 0 && inc.States[0] {
 			confirmed = append(confirmed, h.Hash)
 			h.Confirmed = true
 		}
 	}
 	//save txs
-	b, err := tx.CreateBucketIfNotExists([]byte("hashes"))
-	if err != nil {
-		return nil, nil, err
-	}
-	bin, err := json.Marshal(hs)
-	if err != nil {
-		return nil, nil, err
-	}
-	if err = b.Put([]byte("hashes"), bin); err != nil {
+	if err := putHashes(tx, hs); err != nil {
 		return nil, nil, err
 	}
 
@@ -141,11 +136,11 @@ func Walletnotify(conf *Conf) ([]string, error) {
 			return nil
 		}
 		//add balances for all newly confirmed tx..
-		resp, err := conf.api.GetTrytes(confirmed)
+		trs, err := getTXs(tx, confirmed)
 		if err != nil {
 			return err
 		}
-		for _, tr := range resp.Trytes {
+		for _, tr := range trs {
 			if tr.Value == 0 {
 				continue
 			}

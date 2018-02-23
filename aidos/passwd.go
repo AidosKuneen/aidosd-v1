@@ -32,8 +32,11 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-var passPhrase = []byte("AidosKuneen")
-var block *aesCrypto
+var (
+	passPhrase = []byte("AidosKuneen")
+	block      *aesCrypto
+	passDB     = []byte("pass_phrase")
+)
 
 type aesCrypto struct {
 	block  cipher.Block
@@ -80,16 +83,16 @@ func password(pwd []byte) error {
 	}
 	err = db.Update(func(tx *bolt.Tx) error {
 		var errr error
-		b := tx.Bucket([]byte("pass_phrase"))
+		b := tx.Bucket(passDB)
 		if b == nil {
 			cipherText := block.encrypt(passPhrase)
-			b, errr = tx.CreateBucket([]byte("pass_phrase"))
+			b, errr = tx.CreateBucket(passDB)
 			if errr != nil {
 				return errr
 			}
-			return b.Put([]byte("pass_phrase"), cipherText)
+			return b.Put(passDB, cipherText)
 		}
-		ct := b.Get([]byte("pass_phrase"))
+		ct := b.Get(passDB)
 		pt := block.decrypt(ct)
 		if !bytes.Equal(passPhrase, pt) {
 			return errors.New("incorrect password")
