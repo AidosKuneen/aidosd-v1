@@ -167,6 +167,7 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 
 //UpdateTXs update TX db from hashes DB.
 func UpdateTXs(conf *Conf) error {
+	log.Println("Updating transactions in DB...")
 	err := db.Update(func(tx *bolt.Tx) error {
 		hs, err := getHashes(tx)
 		if err != nil {
@@ -190,5 +191,6 @@ func UpdateTXs(conf *Conf) error {
 		}
 		return nil
 	})
+	log.Println("done.")
 	return err
 }
