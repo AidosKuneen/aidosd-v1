@@ -198,6 +198,6 @@ func UpdateTXs(conf *Conf) error {
 		}
 		return nil
 	})
-	log.Println("done.")
+	log.Println("Update done.")
 	return err
 }

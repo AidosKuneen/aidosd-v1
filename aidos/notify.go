@@ -107,6 +107,7 @@ func Walletnotify(conf *Conf) ([]string, error) {
 			return err
 		}
 		if len(acc) == 0 {
+			log.Println("no address in wallet.")
 			return nil
 		}
 		for _, ac := range acc {
@@ -178,6 +179,7 @@ func Walletnotify(conf *Conf) ([]string, error) {
 	}
 	//exec cmds for all new txs. %s will be the bundle hash.
 	if conf.Notify == "" {
+		log.Println("end of walletnotify")
 		return nil, nil
 	}
 	result := make([]string, 0, len(bdls))
