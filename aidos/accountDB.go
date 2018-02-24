@@ -22,13 +22,14 @@ package aidos
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
 )
 
 var accountDB = []byte("accounts")
+
+var lastAccount *Account
 
 //Balance represents balance, with change value.
 type Balance struct {
@@ -63,7 +64,23 @@ func (a *Account) totalValueWithChange() int64 {
 	return t
 }
 
+func (a *Account) search(adr gadk.Address) int {
+	index := -1
+	for i, bal := range a.Balances {
+		if adr == bal.Address {
+			index = i
+		}
+	}
+	return index
+}
+
 func findAddress(tx *bolt.Tx, adr gadk.Address) (*Account, int, error) {
+	if lastAccount != nil {
+		i := lastAccount.search(adr)
+		if i >= 0 {
+			return lastAccount, i, nil
+		}
+	}
 	b := tx.Bucket(accountDB)
 	if b == nil {
 		return nil, -1, nil
@@ -72,9 +89,6 @@ func findAddress(tx *bolt.Tx, adr gadk.Address) (*Account, int, error) {
 	var result *Account
 	index := -1
 	for k, v := c.First(); k != nil; k, v = c.Next() {
-		if !strings.Contains(string(v), string(adr)) {
-			continue
-		}
 		var ac Account
 		if err := json.Unmarshal(v, &ac); err != nil {
 			return nil, -1, err
@@ -91,6 +105,7 @@ func findAddress(tx *bolt.Tx, adr gadk.Address) (*Account, int, error) {
 		seed := block.decrypt(ac.EncSeed)
 		ac.Seed = gadk.Trytes(seed)
 		result = &ac
+		lastAccount = result
 		break
 	}
 	return result, index, nil
