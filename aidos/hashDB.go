@@ -27,6 +27,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
@@ -136,8 +137,17 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 	}
 	c := b.Cursor()
 	var trs []*gadk.Transaction
-	for k, _ := c.First(); k != nil; k, _ = c.Next() {
-		tr, err := getTX(tx, gadk.Trytes(k))
+	for k, v := c.First(); k != nil; k, v = c.Next() {
+		r := flate.NewReader(bytes.NewBuffer(v))
+		trytes, err := ioutil.ReadAll(r)
+		if err != nil {
+			log.Println(err)
+			return nil, nil, err
+		}
+		if !strings.Contains(string(trytes), string(bundle)) {
+			continue
+		}
+		tr, err := gadk.NewTransaction(gadk.Trytes(trytes))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -152,8 +162,9 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 	}
 	for _, tr := range trs {
 		var found bool
+		trh := tr.Hash()
 		for _, h := range hs {
-			if h.Hash == tr.Hash() {
+			if h.Hash == trh {
 				found = true
 				hashes = append(hashes, h)
 			}

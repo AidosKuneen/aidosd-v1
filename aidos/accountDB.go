@@ -22,6 +22,7 @@ package aidos
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
@@ -71,6 +72,9 @@ func findAddress(tx *bolt.Tx, adr gadk.Address) (*Account, int, error) {
 	var result *Account
 	index := -1
 	for k, v := c.First(); k != nil; k, v = c.Next() {
+		if !strings.Contains(string(v), string(adr)) {
+			continue
+		}
 		var ac Account
 		if err := json.Unmarshal(v, &ac); err != nil {
 			return nil, -1, err
