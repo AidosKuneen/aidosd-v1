@@ -21,13 +21,9 @@
 package aidos
 
 import (
-	"bytes"
-	"compress/flate"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"log"
-	"strings"
 
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
@@ -70,6 +66,14 @@ var txDB = []byte("transactions")
 
 var errTxNotFound = errors.New("tx is not found")
 
+var emptysig gadk.Trytes
+
+func init() {
+	for i := 0; i < gadk.SignatureSize/3; i++ {
+		emptysig += "9"
+	}
+}
+
 func getTX(tx *bolt.Tx, hash gadk.Trytes) (*gadk.Transaction, error) {
 	b := tx.Bucket(txDB)
 	if b == nil {
@@ -79,14 +83,10 @@ func getTX(tx *bolt.Tx, hash gadk.Trytes) (*gadk.Transaction, error) {
 	if v == nil {
 		return nil, errTxNotFound
 	}
-	r := flate.NewReader(bytes.NewBuffer(v))
-	trytes, err := ioutil.ReadAll(r)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
+	trytes := emptysig + gadk.Trytes(v)
 	return gadk.NewTransaction(gadk.Trytes(trytes))
 }
+
 func getTXs(tx *bolt.Tx, hash []gadk.Trytes) ([]*gadk.Transaction, error) {
 	b := tx.Bucket(txDB)
 	if b == nil {
@@ -98,11 +98,7 @@ func getTXs(tx *bolt.Tx, hash []gadk.Trytes) ([]*gadk.Transaction, error) {
 		if v == nil {
 			return nil, errTxNotFound
 		}
-		r := flate.NewReader(bytes.NewBuffer(v))
-		trytes, err := ioutil.ReadAll(r)
-		if err != nil {
-			return nil, err
-		}
+		trytes := emptysig + gadk.Trytes(v)
 		tr, err := gadk.NewTransaction(gadk.Trytes(trytes))
 		if err != nil {
 			return nil, err
@@ -116,18 +112,8 @@ func putTX(tx *bolt.Tx, tr *gadk.Transaction) error {
 	if err != nil {
 		return err
 	}
-	var buf bytes.Buffer
-	zw, err := flate.NewWriter(&buf, flate.BestCompression)
-	if err != nil {
-		return err
-	}
-	if _, err := zw.Write([]byte(tr.Trytes())); err != nil {
-		return err
-	}
-	if err := zw.Close(); err != nil {
-		return err
-	}
-	return b.Put([]byte(tr.Hash()), buf.Bytes())
+	trytes := tr.Trytes()[gadk.SignatureSize/3:]
+	return b.Put([]byte(tr.Hash()), []byte(trytes))
 }
 
 func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, error) {
@@ -138,15 +124,7 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 	c := b.Cursor()
 	var trs []*gadk.Transaction
 	for k, v := c.First(); k != nil; k, v = c.Next() {
-		r := flate.NewReader(bytes.NewBuffer(v))
-		trytes, err := ioutil.ReadAll(r)
-		if err != nil {
-			log.Println(err)
-			return nil, nil, err
-		}
-		if !strings.Contains(string(trytes), string(bundle)) {
-			continue
-		}
+		trytes := emptysig + gadk.Trytes(v)
 		tr, err := gadk.NewTransaction(gadk.Trytes(trytes))
 		if err != nil {
 			return nil, nil, err
