@@ -33,7 +33,7 @@ import (
 )
 
 var privileged bool
-var mutex sync.RWMutex
+var pmutex sync.RWMutex
 
 func send(acc string, conf *Conf, trs []gadk.Transfer) (gadk.Trytes, error) {
 	var mwm int64 = 18
@@ -75,12 +75,14 @@ func send(acc string, conf *Conf, trs []gadk.Transfer) (gadk.Trytes, error) {
 }
 
 func sendmany(conf *Conf, req *Request, res *Response) error {
-	mutex.RLock()
+	pmutex.RLock()
 	if !privileged {
-		mutex.RUnlock()
+		pmutex.RUnlock()
 		return errors.New("not priviledged")
 	}
-	mutex.RUnlock()
+	pmutex.RUnlock()
+	mutex.Lock()
+	defer mutex.Unlock()
 	data, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("invalid params")
@@ -129,12 +131,14 @@ func sendmany(conf *Conf, req *Request, res *Response) error {
 
 func sendfrom(conf *Conf, req *Request, res *Response) error {
 	var err error
-	mutex.RLock()
+	pmutex.RLock()
 	if !privileged {
-		mutex.RUnlock()
+		pmutex.RUnlock()
 		return errors.New("not priviledged")
 	}
-	mutex.RUnlock()
+	pmutex.RUnlock()
+	mutex.Lock()
+	defer mutex.Unlock()
 	data, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("invalid params")
@@ -166,12 +170,14 @@ func sendfrom(conf *Conf, req *Request, res *Response) error {
 }
 func sendtoaddress(conf *Conf, req *Request, res *Response) error {
 	var err error
-	mutex.RLock()
+	pmutex.RLock()
 	if !privileged {
-		mutex.RUnlock()
+		pmutex.RUnlock()
 		return errors.New("not priviledged")
 	}
-	mutex.RUnlock()
+	pmutex.RUnlock()
+	mutex.Lock()
+	defer mutex.Unlock()
 	var tr gadk.Transfer
 	tr.Tag = "AIDOSD999999C99999999999999"
 
@@ -201,12 +207,12 @@ func sendtoaddress(conf *Conf, req *Request, res *Response) error {
 }
 
 func walletpassphrase(conf *Conf, req *Request, res *Response) error {
-	mutex.RLock()
+	pmutex.RLock()
 	if privileged {
-		mutex.RUnlock()
+		pmutex.RUnlock()
 		return nil
 	}
-	mutex.RUnlock()
+	pmutex.RUnlock()
 	data, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("invalid params")
@@ -227,13 +233,13 @@ func walletpassphrase(conf *Conf, req *Request, res *Response) error {
 		return errors.New("invalid password")
 	}
 	go func() {
-		mutex.Lock()
+		pmutex.Lock()
 		privileged = true
-		mutex.Unlock()
+		pmutex.Unlock()
 		time.Sleep(time.Second * time.Duration(sec))
-		mutex.Lock()
+		pmutex.Lock()
 		privileged = false
-		mutex.Unlock()
+		pmutex.Unlock()
 	}()
 	return nil
 }

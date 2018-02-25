@@ -28,6 +28,8 @@ import (
 )
 
 func getnewaddress(conf *Conf, req *Request, res *Response) error {
+	mutex.Lock()
+	defer mutex.Unlock()
 	data, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("invalid params")
@@ -68,6 +70,8 @@ func getnewaddress(conf *Conf, req *Request, res *Response) error {
 	})
 }
 func getBalance(api apis, tx *bolt.Tx) ([]Account, map[gadk.Address]int64, error) {
+	mutex.RLock()
+	defer mutex.RUnlock()
 	acs, err := listAccount(tx)
 	if err != nil {
 		return nil, nil, err
@@ -86,6 +90,8 @@ func getBalance(api apis, tx *bolt.Tx) ([]Account, map[gadk.Address]int64, error
 	return acs, balmap, err
 }
 func listaddressgroupings(conf *Conf, req *Request, res *Response) error {
+	mutex.RLock()
+	defer mutex.RUnlock()
 	var result [][][]interface{}
 	var r0 [][]interface{}
 	err := db.View(func(tx *bolt.Tx) error {
@@ -112,6 +118,8 @@ func listaddressgroupings(conf *Conf, req *Request, res *Response) error {
 	return err
 }
 func getbalance(conf *Conf, req *Request, res *Response) error {
+	mutex.RLock()
+	defer mutex.RUnlock()
 	data, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("param must be slice")
@@ -167,6 +175,8 @@ func getbalance(conf *Conf, req *Request, res *Response) error {
 	return err
 }
 func listaccounts(conf *Conf, req *Request, res *Response) error {
+	mutex.RLock()
+	defer mutex.RUnlock()
 	ary, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("invalid param")
@@ -221,6 +231,8 @@ type info struct {
 
 //only 'isvalid' params is valid, others may be incorrect.
 func validateaddress(conf *Conf, req *Request, res *Response) error {
+	mutex.RLock()
+	defer mutex.RUnlock()
 	data, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("invalid params")
@@ -294,6 +306,8 @@ type tx struct {
 }
 
 func gettransaction(conf *Conf, req *Request, res *Response) error {
+	mutex.RLock()
+	defer mutex.RUnlock()
 	data, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("invalid params")
@@ -396,6 +410,8 @@ type transaction struct {
 
 //dont supprt over 1000 txs.
 func listtransactions(conf *Conf, req *Request, res *Response) error {
+	mutex.RLock()
+	defer mutex.RUnlock()
 	data, ok := req.Params.([]interface{})
 	if !ok {
 		return errors.New("invalid params")

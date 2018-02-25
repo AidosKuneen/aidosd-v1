@@ -97,6 +97,8 @@ func compareHashes(api apis, tx *bolt.Tx, hashes []gadk.Trytes) ([]gadk.Trytes, 
 
 //Walletnotify exec walletnotify scripts when receivng tx and tx is confirmed.
 func Walletnotify(conf *Conf) ([]string, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	log.Println("starting walletnotify...")
 	bdls := make(map[gadk.Trytes]struct{})
 	err := db.Update(func(tx *bolt.Tx) error {

@@ -132,6 +132,9 @@ func listAccount(tx *bolt.Tx) ([]Account, error) {
 }
 
 func getAccount(tx *bolt.Tx, name string) (*Account, error) {
+	if lastAccount != nil && lastAccount.Name == name {
+		return lastAccount, nil
+	}
 	var ac Account
 	b := tx.Bucket(accountDB)
 	if b == nil {
@@ -150,6 +153,9 @@ func getAccount(tx *bolt.Tx, name string) (*Account, error) {
 }
 
 func putAccount(tx *bolt.Tx, acc *Account) error {
+	if lastAccount.Name == acc.Name {
+		lastAccount = acc
+	}
 	b, err := tx.CreateBucketIfNotExists(accountDB)
 	if err != nil {
 		return err

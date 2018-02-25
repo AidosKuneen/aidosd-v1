@@ -33,6 +33,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -53,6 +54,8 @@ type apis interface {
 	GetNodeInfo() (*gadk.GetNodeInfoResponse, error)
 	GetInclusionStates([]gadk.Trytes, []gadk.Trytes) (*gadk.GetInclusionStatesResponse, error)
 }
+
+var mutex sync.RWMutex
 
 //Conf is configuration for aidosd.
 type Conf struct {
