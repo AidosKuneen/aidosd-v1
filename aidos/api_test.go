@@ -58,6 +58,7 @@ aidos_node = http://78.46.250.88:15555
 }
 
 func prepareTest(t *testing.T) *Conf {
+	lastAccount = nil
 	if db != nil {
 		if err := db.Close(); err != nil {
 			t.Log(err)
