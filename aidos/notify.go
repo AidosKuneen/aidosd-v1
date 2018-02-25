@@ -30,37 +30,41 @@ import (
 	shellwords "github.com/mattn/go-shellwords"
 )
 
-func compareHashes(api apis, tx *bolt.Tx, hashes []gadk.Trytes) ([]gadk.Trytes, []gadk.Trytes, error) {
+func compareHashes(api apis, hashes []gadk.Trytes) ([]gadk.Trytes, []gadk.Trytes, error) {
 	var confirmed []gadk.Trytes
-	//search new tx
-	hs, err := getHashes(tx)
-	if err != nil {
-		return nil, nil, err
-	}
-	news := make([]*txstate, 0, len(hashes))
-	nhashes := make([]gadk.Trytes, 0, len(hashes))
-	for _, h1 := range hashes {
-		exist := false
-		for _, h2 := range hs {
-			if h1 == h2.Hash {
-				exist = true
-				break
+	var hs, news []*txstate
+	err := db.Update(func(tx *bolt.Tx) error {
+		//search new tx
+		hs, err := getHashes(tx)
+		if err != nil {
+			return err
+		}
+		news = make([]*txstate, 0, len(hashes))
+		nhashes := make([]gadk.Trytes, 0, len(hashes))
+		for _, h1 := range hashes {
+			exist := false
+			for _, h2 := range hs {
+				if h1 == h2.Hash {
+					exist = true
+					break
+				}
+			}
+			if !exist {
+				news = append(news, &txstate{Hash: h1})
+				nhashes = append(nhashes, h1)
 			}
 		}
-		if !exist {
-			news = append(news, &txstate{Hash: h1})
-			nhashes = append(nhashes, h1)
+		trs, err := api.GetTrytes(nhashes)
+		if err != nil {
+			return err
 		}
-	}
-	trs, err := api.GetTrytes(nhashes)
-	if err != nil {
-		return nil, nil, err
-	}
-	for _, tr := range trs.Trytes {
-		if err := putTX(tx, &tr); err != nil {
-			return nil, nil, err
+		for _, tr := range trs.Trytes {
+			if err := putTX(tx, &tr); err != nil {
+				return err
+			}
 		}
-	}
+		return nil
+	})
 
 	//search newly confirmed tx
 	confirmed = make([]gadk.Trytes, 0, len(hs))
@@ -83,8 +87,11 @@ func compareHashes(api apis, tx *bolt.Tx, hashes []gadk.Trytes) ([]gadk.Trytes, 
 			h.Confirmed = true
 		}
 	}
-	//save txs
-	if err := putHashes(tx, hs); err != nil {
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		return putHashes(tx, hs)
+	})
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -97,43 +104,47 @@ func compareHashes(api apis, tx *bolt.Tx, hashes []gadk.Trytes) ([]gadk.Trytes, 
 
 //Walletnotify exec walletnotify scripts when receivng tx and tx is confirmed.
 func Walletnotify(conf *Conf) ([]string, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
 	log.Println("starting walletnotify...")
 	bdls := make(map[gadk.Trytes]struct{})
-	err := db.Update(func(tx *bolt.Tx) error {
+	var acc []Account
+	var adrs []gadk.Address
+	err := db.View(func(tx *bolt.Tx) error {
 		//get all addresses
-		var adrs []gadk.Address
-		acc, err := listAccount(tx)
-		if err != nil {
-			return err
+		var err2 error
+		acc, err2 = listAccount(tx)
+		return err2
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(acc) == 0 {
+		log.Println("no address in wallet.")
+		return nil, nil
+	}
+	for _, ac := range acc {
+		for _, b := range ac.Balances {
+			adrs = append(adrs, b.Address)
 		}
-		if len(acc) == 0 {
-			log.Println("no address in wallet.")
-			return nil
-		}
-		for _, ac := range acc {
-			for _, b := range ac.Balances {
-				adrs = append(adrs, b.Address)
-			}
-		}
-		//get all trytes for all addresses
-		ft := gadk.FindTransactionsRequest{
-			Addresses: adrs,
-		}
-		r, err := conf.api.FindTransactions(&ft)
-		if err != nil {
-			return err
-		}
-		if len(r.Hashes) == 0 {
-			log.Println("no tx for addresses in wallet")
-			return nil
-		}
-		//get newly added and newly confirmed trytes.
-		news, confirmed, err := compareHashes(conf.api, tx, r.Hashes)
-		if err != nil {
-			return err
-		}
+	}
+	//get all trytes for all addresses
+	ft := gadk.FindTransactionsRequest{
+		Addresses: adrs,
+	}
+	r, err := conf.api.FindTransactions(&ft)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(r.Hashes) == 0 {
+		log.Println("no tx for addresses in wallet")
+		return nil, nil
+	}
+	//get newly added and newly confirmed trytes.
+	news, confirmed, err := compareHashes(conf.api, r.Hashes)
+	if err != nil {
+		return nil, err
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
 		if len(news) == 0 && len(confirmed) == 0 {
 			log.Println("no tx to be handled")
 			return nil
