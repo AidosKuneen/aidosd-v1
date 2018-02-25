@@ -153,7 +153,7 @@ func getAccount(tx *bolt.Tx, name string) (*Account, error) {
 }
 
 func putAccount(tx *bolt.Tx, acc *Account) error {
-	if lastAccount.Name == acc.Name {
+	if lastAccount != nil && lastAccount.Name == acc.Name {
 		lastAccount = acc
 	}
 	b, err := tx.CreateBucketIfNotExists(accountDB)
