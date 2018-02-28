@@ -66,6 +66,9 @@ func compareHashes(api apis, hashes []gadk.Trytes) ([]gadk.Trytes, []gadk.Trytes
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 
 	//search newly confirmed tx
 	confirmed = make([]gadk.Trytes, 0, len(hs))

@@ -84,7 +84,7 @@ func getTX(tx *bolt.Tx, hash gadk.Trytes) (*gadk.Transaction, error) {
 		return nil, errTxNotFound
 	}
 	trytes := emptysig + gadk.Trytes(v)
-	return gadk.NewTransaction(gadk.Trytes(trytes))
+	return gadk.NewTransaction(trytes)
 }
 
 func getTXs(tx *bolt.Tx, hash []gadk.Trytes) ([]*gadk.Transaction, error) {
@@ -99,7 +99,7 @@ func getTXs(tx *bolt.Tx, hash []gadk.Trytes) ([]*gadk.Transaction, error) {
 			return nil, errTxNotFound
 		}
 		trytes := emptysig + gadk.Trytes(v)
-		tr, err := gadk.NewTransaction(gadk.Trytes(trytes))
+		tr, err := gadk.NewTransaction(trytes)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +125,7 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 	var trs []*gadk.Transaction
 	for k, v := c.First(); k != nil; k, v = c.Next() {
 		trytes := emptysig + gadk.Trytes(v)
-		tr, err := gadk.NewTransaction(gadk.Trytes(trytes))
+		tr, err := gadk.NewTransaction(trytes)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -164,10 +164,10 @@ func UpdateTXs(conf *Conf) error {
 		}
 		var req []gadk.Trytes
 		for _, h := range hs {
-			_, err := getTX(tx, h.Hash)
-			if err != errTxNotFound {
-				if err != nil {
-					return err
+			_, err2 := getTX(tx, h.Hash)
+			if err2 != errTxNotFound {
+				if err2 != nil {
+					return err2
 				}
 				continue
 			}
