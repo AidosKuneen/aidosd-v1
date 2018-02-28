@@ -121,7 +121,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		aidos.RefreshAccount(conf)
+		aidos.ResetDB(conf)
 	}
 }
 

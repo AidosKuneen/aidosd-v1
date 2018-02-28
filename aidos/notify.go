@@ -138,7 +138,6 @@ func Walletnotify(conf *Conf) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if len(r.Hashes) == 0 {
 		log.Println("no tx for addresses in wallet")
 		return nil, nil

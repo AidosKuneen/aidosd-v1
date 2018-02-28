@@ -250,3 +250,30 @@ func RefreshAccount(conf *Conf) {
 	}
 
 }
+
+//ResetDB reset  hashes and balances.
+func ResetDB(conf *Conf) {
+	err := db.Update(func(tx *bolt.Tx) error {
+		var hs []*txstate
+		if err := putHashes(tx, hs); err != nil {
+			return err
+		}
+		acc, err2 := listAccount(tx)
+		if err2 != nil {
+			return err2
+		}
+		for _, ac := range acc {
+			for i := range ac.Balances {
+				ac.Balances[i].Balance.Value = 0
+			}
+			if err := putAccount(tx, &ac); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
