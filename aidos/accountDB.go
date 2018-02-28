@@ -22,6 +22,7 @@ package aidos
 
 import (
 	"encoding/json"
+	"log"
 
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
@@ -168,4 +169,84 @@ func putAccount(tx *bolt.Tx, acc *Account) error {
 		return err
 	}
 	return b.Put(toKey(acc.Name), bin)
+}
+
+//RefreshAccount refresh all hashes and accounts from address in address.
+func RefreshAccount(conf *Conf) {
+	log.Println("starting refresh...")
+	// ni, err2 := conf.api.GetNodeInfo()
+	// if err2 != nil {
+	// 	log.Fatal(err2)
+	// }
+	err := db.Update(func(tx *bolt.Tx) error {
+		acc, err2 := listAccount(tx)
+		if err2 != nil {
+			return err2
+		}
+		hs, err2 := getHashes(tx)
+		if err2 != nil {
+			return err2
+		}
+		for _, ac := range acc {
+			log.Println("processing account", ac.Name)
+			var adrs []gadk.Address
+			for _, b := range ac.Balances {
+				adrs = append(adrs, b.Address)
+			}
+
+			ft := gadk.FindTransactionsRequest{
+				Addresses: adrs,
+			}
+			r, err2 := conf.api.FindTransactions(&ft)
+			if err2 != nil {
+				return err2
+			}
+			log.Println("updating hashes")
+			for _, h1 := range r.Hashes {
+				exist := false
+				for _, h2 := range hs {
+					if h1 == h2.Hash {
+						exist = true
+						break
+					}
+				}
+				if !exist {
+					hs = append(hs, &txstate{
+						Hash: h1,
+					})
+				}
+			}
+			// log.Println("updating confirmation")
+			// for i := range hs {
+			// 	if i%10 == 0 {
+			// 		log.Println("processing no.", i, "/", len(hs))
+			// 	}
+			// 	inc, err := conf.api.GetInclusionStates([]gadk.Trytes{hs[i].Hash}, []gadk.Trytes{ni.LatestMilestone})
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			// 	hs[i].Confirmed = inc.States[0]
+			// }
+			log.Println("updating balance")
+			bals, err2 := conf.api.Balances(adrs)
+			if err2 != nil {
+				return err2
+			}
+			for _, b := range bals {
+				for _, ab := range ac.Balances {
+					if b.Address == ab.Address {
+						ab.Balance = b
+					}
+				}
+			}
+			if err := putAccount(tx, &ac); err != nil {
+				return err
+			}
+		}
+		return putHashes(tx, hs)
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }

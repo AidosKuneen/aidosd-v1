@@ -70,7 +70,7 @@ type Conf struct {
 }
 
 //ParseConf parses conf file.
-func parseConf(cfile string) *Conf {
+func ParseConf(cfile string) *Conf {
 	conf := Conf{
 		RPCPort:    "8332",
 		PassPhrase: true,
@@ -285,12 +285,13 @@ func Handle(conf *Conf, w http.ResponseWriter, r *http.Request) {
 //Prepare prepares aidosd.
 func Prepare(cfile string, passwd []byte) (*Conf, error) {
 	setDB()
+
 	if err := password(passwd); err != nil {
 		fmt.Println(err)
 		Exit()
 		return nil, err
 	}
-	conf := parseConf(cfile)
+	conf := ParseConf(cfile)
 
 	return conf, nil
 }
