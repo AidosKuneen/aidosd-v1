@@ -167,7 +167,7 @@ func UpdateTXs(conf *Conf) error {
 			_, err := getTX(tx, h.Hash)
 			if err != errTxNotFound {
 				if err != nil {
-					return nil
+					return err
 				}
 				continue
 			}

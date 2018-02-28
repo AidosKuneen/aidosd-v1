@@ -223,10 +223,7 @@ func broadcast(api apis, trytes []gadk.Transaction) error {
 	if err := api.StoreTransactions(trytes); err != nil {
 		return err
 	}
-	if err := api.BroadcastTransactions(trytes); err != nil {
-		return err
-	}
-	return nil
+	return api.BroadcastTransactions(trytes)
 }
 
 //HasValidNonce checks t's hash has valid MinWeightMagnitude.

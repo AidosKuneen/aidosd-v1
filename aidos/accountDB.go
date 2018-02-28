@@ -167,8 +167,5 @@ func putAccount(tx *bolt.Tx, acc *Account) error {
 	if err != nil {
 		return err
 	}
-	if err := b.Put(toKey(acc.Name), bin); err != nil {
-		return err
-	}
-	return nil
+	return b.Put(toKey(acc.Name), bin)
 }

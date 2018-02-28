@@ -35,7 +35,8 @@ func compareHashes(api apis, hashes []gadk.Trytes) ([]gadk.Trytes, []gadk.Trytes
 	var hs, news []*txstate
 	err := db.Update(func(tx *bolt.Tx) error {
 		//search new tx
-		hs, err := getHashes(tx)
+		var err error
+		hs, err = getHashes(tx)
 		if err != nil {
 			return err
 		}
