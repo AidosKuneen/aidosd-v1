@@ -64,6 +64,8 @@ Configurations are in `aidosd.conf`.
  * `aidos_node`: Host address of an Aidos node server , which must be confifured  for wallet.
  * `testnet`: Set `true` if you are using `testnet` (default: false).
  * `passphrase`: Set `false` if your program sends tokens withtout `walletpassphrase` (default :true) .
+ * `tag`: Set your identifier. You can use charcters 9 and A~Z and don't use other ones, and it must be under 20 characters.
+ This is used as tag in transactions aidosd sends.
 
 Note that `aidosd` always encrypts seeds with AES regardles `passphrase` settings. 
 
@@ -77,6 +79,7 @@ walletnotify=/home/adk/script/receive.sh %s
 aidos_node = http://localhost:14266
 testnet = false
 passphrase = true
+tag = "AWESOME9EXCHANGER"
 ```
 
 ```

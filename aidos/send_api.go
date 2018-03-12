@@ -122,7 +122,7 @@ func sendmany(conf *Conf, req *Request, res *Response) error {
 			return err
 		}
 		trs[i].Value = int64(v * 100000000)
-		trs[i].Tag = "AIDOSD999999A99999999999999"
+		trs[i].Tag = gadk.Trytes(conf.Tag)
 		i++
 	}
 	res.Result, err = send(acc, conf, trs)
@@ -151,7 +151,7 @@ func sendfrom(conf *Conf, req *Request, res *Response) error {
 		return errors.New("invalid account")
 	}
 	var tr gadk.Transfer
-	tr.Tag = "AIDOSD999999B99999999999999"
+	tr.Tag = gadk.Trytes(conf.Tag)
 	adrstr, ok := data[1].(string)
 	if !ok {
 		return errors.New("invalid address")
@@ -179,7 +179,7 @@ func sendtoaddress(conf *Conf, req *Request, res *Response) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 	var tr gadk.Transfer
-	tr.Tag = "AIDOSD999999C99999999999999"
+	tr.Tag = gadk.Trytes(conf.Tag)
 
 	data, ok := req.Params.([]interface{})
 	if !ok {

@@ -66,6 +66,7 @@ type Conf struct {
 	Node        string
 	Testnet     bool
 	PassPhrase  bool
+	Tag         string
 	api         apis
 }
 
@@ -130,10 +131,25 @@ func ParseConf(cfile string) *Conf {
 			default:
 				panic("passphrase must be true or false")
 			}
+		case "tag":
+			for _, c := range states[1] {
+				if !(c == '9' || (c >= 'A' && c <= 'Z')) {
+					panic("invalid chracterin tag params. You can use characters 9 and A~Z ")
+				}
+			}
+			if len(states[1]) > 20 {
+				panic("tag is too long, must be under 20 characters.")
+			}
+			conf.Tag = states[1]
+
 		default:
 			log.Println(states[0] + " is ignored.")
 		}
 	}
+	for i := len(conf.Tag); i < 20; i++ {
+		conf.Tag += "9"
+	}
+	conf.Tag += "9AIDOSD"
 	conf.api = gadk.NewAPI(conf.Node, nil)
 	return &conf
 }
