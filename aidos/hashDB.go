@@ -122,7 +122,7 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 		return nil, nil, errTxNotFound
 	}
 	c := b.Cursor()
-	var trs []*gadk.Transaction
+	trmap := make(map[gadk.Trytes]*gadk.Transaction)
 	for k, v := c.First(); k != nil; k, v = c.Next() {
 		trytes := emptysig + gadk.Trytes(v)
 		tr, err := gadk.NewTransaction(trytes)
@@ -130,7 +130,7 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 			return nil, nil, err
 		}
 		if tr.Bundle == bundle {
-			trs = append(trs, tr)
+			trmap[gadk.Trytes(k)] = tr
 		}
 	}
 	var hashes []*txstate
@@ -138,9 +138,8 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 	if err != nil {
 		return nil, nil, err
 	}
-	for _, tr := range trs {
+	for trh, tr := range trmap {
 		var found bool
-		trh := tr.Hash()
 		for _, h := range hs {
 			if h.Hash == trh {
 				found = true
@@ -148,8 +147,13 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 			}
 		}
 		if !found {
+			log.Println(tr.Bundle, tr.Hash(), tr.Trytes())
 			return nil, nil, errors.New("hash not found for " + string(tr.Hash()))
 		}
+	}
+	trs := make([]*gadk.Transaction, 0, len(trmap))
+	for _, v := range trmap {
+		trs = append(trs, v)
 	}
 	return trs, hashes, nil
 }
