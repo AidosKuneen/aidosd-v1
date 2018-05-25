@@ -82,7 +82,7 @@ func main() {
 		if len(passwd) == 0 {
 			passwd = getPasswd()
 		}
-		if err := runParent(passwd, os.Args[0], ""); err != nil {
+		if err := runParent(passwd, os.Args[0]); err != nil {
 			panic(err)
 		}
 		fmt.Println("aidosd is started")
@@ -224,7 +224,6 @@ func call(method string, args interface{}, ret interface{}) error {
 
 func runParent(passwd []byte, oargs ...string) error {
 	args := []string{"-child"}
-	args = append(args, oargs[1:]...)
 	cmd := exec.Command(oargs[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
