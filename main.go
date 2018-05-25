@@ -78,8 +78,11 @@ func main() {
 		}
 	}
 	if start {
-		passwd := getPasswd()
-		if err := runParent(passwd, os.Args...); err != nil {
+		passwd := []byte(os.Getenv("AIDOSD_PASSWORD"))
+		if len(passwd) == 0 {
+			passwd = getPasswd()
+		}
+		if err := runParent(passwd, ""); err != nil {
 			panic(err)
 		}
 		fmt.Println("aidosd is started")
