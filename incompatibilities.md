@@ -1,6 +1,9 @@
 # Incompatibilities
 
 ## Common Differences with Bitcon
+
+## NOTE: DON'T USE MULTIPLE ACCOUTS. Account feature will be removed in  a later version.
+
 * These APIs don't have full features, these are just for a few exchange programs.
 * Error codes and error string from these commands are not same as ones from bitcoin.
 * Deposit addresses must be changed per every deposits e.g. by calling `getnewaddress` on your exchange system by your own. This library doesn't care about the changing addresses.
@@ -8,6 +11,8 @@
 * You cannot use "watch-only address" and "transaction comment". All of these parameters are ignored.
 * Confirmations in ADK are regarded as "finalized", so all parameters for
  number of comfirmations  are ignored.
+
+
 
 ## Details for Each APIs
 
