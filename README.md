@@ -5,6 +5,9 @@
 
 aidosd is a deamon which acts as bitcoind for adk. For now impletented APIs are :
 
+## NOTE: DON'T USE MULTIPLE ACCOUTS. Account feature will be removed in  a later version.
+
+
 * `getnewaddress`
 * `listaccounts`
 * `listaddressgroupings`
@@ -26,7 +29,6 @@ about how to call these APIs.
 See [incompatibility lists](https://github.com/AidosKuneen/aidosd/blob/master/incompatibilities.md)
 for details about incompatibilities with Bitcoin APIs.
 
-# NOTE: DON'T USE MULTIPLE ACCOUTS. Account feature will be removed in  a later version.
 
 # Reqirements
 
