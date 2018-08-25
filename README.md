@@ -23,9 +23,10 @@ and `walletnotify` feature.
 Refer Bitcoin API Reference (e.g. [here](https://bitcoin.org/en/developer-reference#rpcs)) for more details
 about how to call these APIs.
 
-
 See [incompatibility lists](https://github.com/AidosKuneen/aidosd/blob/master/incompatibilities.md)
 for details about incompatibilities with Bitcoin APIs.
+
+# NOTE: DON'T USE MULTIPLE ACCOUTS. Account feature will be removed in  a later version.
 
 # Reqirements
 
