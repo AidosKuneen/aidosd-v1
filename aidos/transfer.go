@@ -77,13 +77,7 @@ func PrepareTransfers(api apis, ac *Account, trs []gadk.Transfer) (gadk.Bundle, 
 		return nil, err
 	}
 	if !sufficient {
-		sufficient, err = addRemainder(api, &bundle, ac, total, true)
-		if err != nil {
-			return nil, err
-		}
-		if !sufficient {
-			return nil, errors.New("insufficient balance")
-		}
+		return nil, errors.New("insufficient balance")
 	}
 	bundle.Finalize(frags)
 	err = signInputs(ac, bundle)
