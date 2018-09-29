@@ -116,15 +116,13 @@ func main() {
 	if refresh {
 		aidos.SetLog(true)
 
-		var dmy string
-		log.Println("Are you sure to refresh db? Please push ctrl-c if you don't know what you are doing!")
-		fmt.Fscan(os.Stdin, &dmy)
 		pwd := getPasswd()
 		conf, err := aidos.Prepare("aidosd.conf", pwd)
 		if err != nil {
 			log.Fatal(err)
 		}
 		aidos.ResetDB(conf)
+		fmt.Println("refreshed")
 	}
 }
 
