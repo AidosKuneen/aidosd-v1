@@ -311,3 +311,17 @@ func Prepare(cfile string, passwd []byte) (*Conf, error) {
 
 	return conf, nil
 }
+
+//ShowSeed shows seeds for all accounts.
+func ShowSeed() error {
+	return db.View(func(tx *bolt.Tx) error {
+		acs, err := listAccount(tx)
+		if err != nil {
+			return err
+		}
+		for _, ac := range acs {
+			log.Println("seed for", ac.Name, ":", ac.Seed)
+		}
+		return nil
+	})
+}

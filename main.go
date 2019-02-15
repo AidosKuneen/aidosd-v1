@@ -56,12 +56,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s <options>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-	var child, start, status, stop, refresh bool
+	var child, start, status, stop, refresh, showSeed bool
 	flag.BoolVar(&child, "child", false, "start as child")
 	flag.BoolVar(&start, "start", false, "start aidosd")
 	flag.BoolVar(&status, "status", false, "show status")
 	flag.BoolVar(&stop, "stop", false, "stop  aidosd")
 	flag.BoolVar(&refresh, "refresh", false, "refresh db(danger)")
+	flag.BoolVar(&showSeed, "show_seed", false, "show the seed")
 	flag.Parse()
 
 	if flag.NFlag() > 1 || flag.NArg() > 0 {
@@ -123,6 +124,18 @@ func main() {
 		}
 		aidos.ResetDB(conf)
 		fmt.Println("refreshed")
+	}
+	if showSeed {
+		aidos.SetLog(true)
+		log.Println("Please ensure that aidosd is stopped in advance")
+		pwd := getPasswd()
+		_, err := aidos.Prepare("aidosd.conf", pwd)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err = aidos.ShowSeed(); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
