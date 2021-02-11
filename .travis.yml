@@ -7,21 +7,17 @@ go:
 env:
   global:
   - FILE_NAME: aidosd_${TRAVIS_TAG}_linux_amd64
-  
+
 before_install:
-- go get -u github.com/axw/gocov/gocov
-- go get -u github.com/alecthomas/gometalinter
-- go get -u github.com/mattn/goveralls
-- go get -u golang.org/x/tools/cmd/cover
+- go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.36.0
 - export PATH=$PATH:$GOPATH/bin
-- gometalinter --install --update
 - go generate -x ./...
 script:
 - travis_wait 30 go test ./... -v  -timeout 100m
 after_success:
-- gometalinter -e bindata --deadline=1000s ./...
+- golangci-lint run
 - go build -o adkd -ldflags "-X github.com/AidosKuneen/aidosd/Version=\"${TRAVIS_TAG}\""
-- tar -cvf  ${FILE_NAME}.tar adkd aidosd.conf
+- tar -cvf ${FILE_NAME}.tar adkd aidosd.conf
 - gzip ${FILE_NAME}.tar
 deploy:
   provider: releases
