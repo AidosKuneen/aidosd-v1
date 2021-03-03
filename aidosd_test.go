@@ -96,7 +96,7 @@ func (p *postparam) post() error {
 	client := &http.Client{}
 
 	auth := base64.StdEncoding.EncodeToString([]byte(user + ":" + pwd))
-	req, err := http.NewRequest("POST", "http://localhost:8332/", bytes.NewBuffer([]byte(p.body)))
+	req, err := http.NewRequest("POST", "http://0.0.0.0:8332/", bytes.NewBuffer([]byte(p.body)))
 	if err != nil {
 		return err
 	}
