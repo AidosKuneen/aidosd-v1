@@ -24,6 +24,10 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/AidosKuneen/aidosd/aidos"
+	"github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/json"
+	"golang.org/x/term"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -32,11 +36,6 @@ import (
 	"runtime"
 	"syscall"
 	"time"
-
-	"github.com/AidosKuneen/aidosd/aidos"
-	"github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 const (
@@ -249,7 +248,7 @@ func runParent(passwd []byte, oargs ...string) error {
 
 func getPasswd() []byte {
 	fmt.Print("Enter password: ")
-	pwd, err := terminal.ReadPassword(int(syscall.Stdin)) //int conversion is needed for win
+	pwd, err := term.ReadPassword(int(syscall.Stdin)) //int conversion is needed for win
 	fmt.Println("")
 	if err != nil {
 		panic(err)

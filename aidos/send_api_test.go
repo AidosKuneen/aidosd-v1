@@ -21,11 +21,10 @@
 package aidos
 
 import (
-	"testing"
-	"time"
-
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
+	"testing"
+	"time"
 )
 
 func preparetSend(t *testing.T) (*Conf, *dummy1) {
@@ -43,7 +42,7 @@ func TestSend(t *testing.T) {
 	if err.Error() != "not priviledged" {
 		t.Error("should be error")
 	}
-	if testwalletpassphrase1(conf, d1); err == nil {
+	if err = testwalletpassphrase1(conf, d1); err == nil {
 		t.Error("should be error")
 	}
 	d1.isConf = false

@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/AidosKuneen/aidosd/aidos"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -31,8 +32,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/AidosKuneen/aidosd/aidos"
 )
 
 func spawn(t *testing.T) string {
@@ -97,7 +96,7 @@ func (p *postparam) post() error {
 	client := &http.Client{}
 
 	auth := base64.StdEncoding.EncodeToString([]byte(user + ":" + pwd))
-	req, err := http.NewRequest("POST", "http://localhost:8332/", bytes.NewBuffer([]byte(p.body)))
+	req, err := http.NewRequest("POST", "http://0.0.0.0:8332/", bytes.NewBuffer([]byte(p.body)))
 	if err != nil {
 		return err
 	}
@@ -171,7 +170,7 @@ func TestAPIFee(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	if _, err := os.Stat("aidosd.conf"); err == nil {
-		os.Rename("aidosd.conf", "_aidosd.conf_")
+		_ = os.Rename("aidosd.conf", "_aidosd.conf_")
 	}
 	err := ioutil.WriteFile("aidosd.conf", []byte(`
 rpcuser=test
@@ -188,7 +187,7 @@ aidos_node = http://78.46.250.88:15555
 	}
 	code := m.Run()
 	if _, err := os.Stat("_aidosd.conf_"); err == nil {
-		os.Rename("_aidosd.conf_", "aidosd.conf")
+		_ = os.Rename("_aidosd.conf_", "aidosd.conf")
 	}
 	os.Exit(code)
 }

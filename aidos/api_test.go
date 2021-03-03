@@ -21,21 +21,20 @@
 package aidos
 
 import (
+	"github.com/AidosKuneen/gadk"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"testing"
-
-	"github.com/AidosKuneen/gadk"
 )
 
 func TestMain(m *testing.M) {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
 	if _, err := os.Stat("../aidosd.conf"); err == nil {
-		os.Rename("../aidosd.conf", "../_aidosd.conf_")
+		_ = os.Rename("../aidosd.conf", "../_aidosd.conf_")
 	}
 	err := ioutil.WriteFile("../aidosd.conf", []byte(`
 rpcuser=test
@@ -52,7 +51,7 @@ aidos_node = http://78.46.250.88:15555
 	}
 	code := m.Run()
 	if _, err := os.Stat("../_aidosd.conf_"); err == nil {
-		os.Rename("../_aidosd.conf_", "../aidosd.conf")
+		_ = os.Rename("../_aidosd.conf_", "../aidosd.conf")
 	}
 	os.Exit(code)
 }
