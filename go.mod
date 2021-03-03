@@ -3,7 +3,7 @@ module github.com/AidosKuneen/aidosd
 go 1.15
 
 require (
-	github.com/AidosKuneen/gadk v0.0.0-20200923140819-00a38f07ed09
+	github.com/AidosKuneen/gadk v0.0.0-20210301173857-93b5eda0f71b
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/boltdb/bolt v1.3.1
 	github.com/gorilla/rpc v1.2.0

@@ -1,5 +1,5 @@
-github.com/AidosKuneen/gadk v0.0.0-20200923140819-00a38f07ed09 h1:sFKOMlmA2xkQv/Z91mI69FFFu4cgXtufUnT8gOapPrk=
-github.com/AidosKuneen/gadk v0.0.0-20200923140819-00a38f07ed09/go.mod h1:t2177F0XMP4ge6OjUhGNFJZUwjXbrBOGc0Iv4MDrAC0=
+github.com/AidosKuneen/gadk v0.0.0-20210301173857-93b5eda0f71b h1:r2ZTw534aa6a3ArTf0obYewHWr5sKv79zgpYutXULXA=
+github.com/AidosKuneen/gadk v0.0.0-20210301173857-93b5eda0f71b/go.mod h1:pTq9FrPZdCaJq49inbxtPAKJLM7LY+lkekoRa/p7nN4=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
