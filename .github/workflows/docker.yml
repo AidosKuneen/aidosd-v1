@@ -30,7 +30,7 @@ jobs:
           context: .
           file: ./Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
-          tags: ghcr.io/AidosKuneen/aidosd:${GITHUB_REF##*/}
+          tags: ghcr.io/aidoskuneen/aidosd:${GITHUB_REF##*/}
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache

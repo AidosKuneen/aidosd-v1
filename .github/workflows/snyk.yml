@@ -1,4 +1,4 @@
-name: Snyk security analysis (NPM)
+name: Snyk security analysis
 on: push
 jobs:
   security:
