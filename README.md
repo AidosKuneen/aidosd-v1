@@ -1,5 +1,4 @@
 [![GoDoc](https://godoc.org/github.com/AidosKuneen/aidosd?status.svg)](https://godoc.org/github.com/AidosKuneen/aidosd)
-[![Build Status](https://travis-ci.org/AidosKuneen/aidosd.svg?branch=master)](https://travis-ci.org/AidosKuneen/aidosd)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/AidosKuneen/aidosd/LICENSE)
 # aidosd
 
@@ -32,14 +31,9 @@ for details about incompatibilities with Bitcoin APIs.
 
 # Reqirements
 
-* go 1.8+
+* go 1.15+
 * gcc (for linux)
 * mingw (for windows)
-
-Dependencies:
-* "github.com/AidosKuneen/gadk"
-* "github.com/boltdb/bolt"
-
 
 # Build
 
