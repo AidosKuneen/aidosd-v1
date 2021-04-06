@@ -33,9 +33,9 @@ import (
 )
 
 var (
-	passPhrase = []byte("AidosKuneen")
+	passPhrase = []byte("AidosKuneen") // Phrase that is encrypted/decrypted using a password
 	block      *aesCrypto
-	passDB     = []byte("pass_phrase")
+	passDB     = []byte("pass_phrase") // Bucket name (in Bolt) for the encrypted passPhrase
 )
 
 type aesCrypto struct {
@@ -74,7 +74,8 @@ func (a *aesCrypto) decrypt(ct []byte) []byte {
 	return pt
 }
 
-//Password reads passowrd fron stdin and save password.
+//Password gets a password, encrypt the defined passPhrase with it and saves the result in Bolt. When the Bolt bucket
+//bucket is available, it checks that the content can be decrypted using the provided password.
 func password(pwd []byte) error {
 	var err error
 	block, err = newAESCrpto(pwd)

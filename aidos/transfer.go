@@ -273,6 +273,7 @@ func Send(conf *Conf, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes,
 				break
 			}
 			if _, ok := conf.api.(*gadk.API); ok && !conf.Testnet {
+				// TODO Remove hardcoded URLs
 				for _, w := range []string{"http://wallet1.aidoskuneen.com:14266", "http://wallet2.aidoskuneen.com:14266"} {
 					api2 := gadk.NewAPI(w, nil)
 					if err := api2.BroadcastTransactions(ts); err != nil {

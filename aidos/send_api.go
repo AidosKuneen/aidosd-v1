@@ -25,11 +25,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
-	"sync"
-	"time"
-
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
+	"sync"
+	"time"
 )
 
 var privileged bool
@@ -38,7 +37,7 @@ var pmutex sync.RWMutex
 func send(acc string, conf *Conf, trs []gadk.Transfer) (gadk.Trytes, error) {
 	var mwm int64 = 18
 	if conf.Testnet {
-		mwm = 15
+		mwm = 13
 	}
 	var result gadk.Trytes
 	err := db.Update(func(tx *bolt.Tx) error {

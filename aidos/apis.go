@@ -22,10 +22,44 @@ package aidos
 
 import (
 	"errors"
-
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
+	"log"
 )
+
+func importwallet(conf *Conf, req *Request, res *Response) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+	data, ok := req.Params.([]interface{})
+	if !ok {
+		return errors.New("invalid params")
+	}
+	if len(data) != 1 {
+		return errors.New("invalid param length")
+	}
+	seed, ok := data[0].(string)
+	if !ok {
+		return errors.New("invalid seed")
+	}
+
+	log.Println("restoring from a seed...")
+	if seedTrytes, err := gadk.ToTrytes(seed); err == nil {
+		err := RestoreAddressesFromSeed(conf, seedTrytes)
+		if err != nil {
+			log.Printf("Error restoring from the seed: %v\n", err)
+
+			return err
+		}
+		RefreshAccount(conf)
+		log.Println("local database has been restored")
+	} else {
+		log.Printf("Error parsing the seed: %v\n", err)
+
+		return err
+	}
+
+	return nil
+}
 
 func getnewaddress(conf *Conf, req *Request, res *Response) error {
 	mutex.Lock()
@@ -56,6 +90,7 @@ func getnewaddress(conf *Conf, req *Request, res *Response) error {
 				Seed: gadk.NewSeed(),
 			}
 		}
+		// TODO Move "2" magic number to a constant
 		adr, err := gadk.NewAddress(ac.Seed, len(ac.Balances), 2)
 		if err != nil {
 			return err
@@ -408,7 +443,7 @@ type transaction struct {
 	Abandoned         *bool  `json:"abandoned,omitempty"`
 }
 
-//dont supprt over 1000 txs.
+//do not support over 1000 txs.
 func listtransactions(conf *Conf, req *Request, res *Response) error {
 	mutex.RLock()
 	defer mutex.RUnlock()

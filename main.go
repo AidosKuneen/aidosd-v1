@@ -45,7 +45,7 @@ const (
 	controlURL = "127.0.0.1:33631"
 )
 
-//Version is aidosd's version. It shoud be overwritten when building on travis.
+//Version is aidosd's version. It should be overwritten when building on CI.
 var Version = "unstable"
 
 func main() {
@@ -57,10 +57,10 @@ func main() {
 	}
 	var child, start, status, stop, refresh, showSeed bool
 	flag.BoolVar(&child, "child", false, "start as child")
-	flag.BoolVar(&start, "start", false, "start aidosd")
+	flag.BoolVar(&start, "start", false, "start aidosd (default behaviour)")
 	flag.BoolVar(&status, "status", false, "show status")
-	flag.BoolVar(&stop, "stop", false, "stop  aidosd")
-	flag.BoolVar(&refresh, "refresh", false, "refresh db(danger)")
+	flag.BoolVar(&stop, "stop", false, "stop aidosd")
+	flag.BoolVar(&refresh, "refresh", false, "refresh the DB (danger!)")
 	flag.BoolVar(&showSeed, "show_seed", false, "show the seed")
 	flag.Parse()
 
@@ -85,7 +85,7 @@ func main() {
 		if err := runParent(passwd, os.Args[0]); err != nil {
 			panic(err)
 		}
-		fmt.Println("aidosd is started")
+		fmt.Println("aidosd has started")
 	}
 	if status {
 		stat, err := callStatus()
@@ -148,7 +148,7 @@ func callStop() error {
 	return call("Control.Stop", &struct{}{}, &struct{}{})
 }
 
-//Control is a struct for controling child.
+//Control is a struct for controlling child.
 type Control struct {
 	status byte
 }
@@ -177,6 +177,7 @@ func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
 			}
 		}()
 	}
+
 	if err := aidos.UpdateTXs(conf); err != nil {
 		log.Fatal(err)
 	}
@@ -259,6 +260,7 @@ func getPasswd() []byte {
 func runChild() error {
 	runtime.SetBlockProfileRate(1)
 	go func() {
+		// TODO Remove hardcoded address and port...
 		log.Println(http.ListenAndServe("127.0.0.1:6060", nil))
 	}()
 

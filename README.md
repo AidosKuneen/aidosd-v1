@@ -1,12 +1,10 @@
 [![GoDoc](https://godoc.org/github.com/AidosKuneen/aidosd?status.svg)](https://godoc.org/github.com/AidosKuneen/aidosd)
-[![Build Status](https://travis-ci.org/AidosKuneen/aidosd.svg?branch=master)](https://travis-ci.org/AidosKuneen/aidosd)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/AidosKuneen/aidosd/LICENSE)
 # aidosd
 
-aidosd is a deamon which acts as bitcoind for adk. For now impletented APIs are :
+aidosd is a deamon which acts as bitcoind for adk. For now implemented APIs are:
 
-## NOTE: DON'T USE MULTIPLE ACCOUTS. Account feature will be removed in  a later version.
-
+## NOTE: DON'T USE MULTIPLE ACCOUNTS. Account feature will be removed in a later version.
 
 * `getnewaddress`
 * `listaccounts`
@@ -32,14 +30,9 @@ for details about incompatibilities with Bitcoin APIs.
 
 # Reqirements
 
-* go 1.8+
+* go 1.15+
 * gcc (for linux)
 * mingw (for windows)
-
-Dependencies:
-* "github.com/AidosKuneen/gadk"
-* "github.com/boltdb/bolt"
-
 
 # Build
 
@@ -63,14 +56,14 @@ Configurations are in `aidosd.conf`.
  * `rpcuser` : Username for JSON-RPC connections 
  * `rpcpassword`: Password for JSON-RPC connections 
  * `rpcport`: Listen for JSON-RPC connections on <port> (default: 8332) 
- * `walletnotify`: Execute command when a  transaction comes into a wallet (%s in cmd is replaced by bundle ID) 
- * `aidos_node`: Host address of an Aidos node server , which must be confifured  for wallet.
+ * `walletnotify`: Execute command when a transaction comes into a wallet (%s in cmd is replaced by bundle ID) 
+ * `aidos_node`: Host address of an Aidos node server , which must be configured for wallet.
  * `testnet`: Set `true` if you are using `testnet` (default: false).
  * `passphrase`: Set `false` if your program sends tokens withtout `walletpassphrase` (default :true) .
  * `tag`: Set your identifier. You can use charcters 9 and A~Z and don't use other ones, and it must be under 20 characters.
  This is used as tag in transactions aidosd sends.
 
-Note that `aidosd` always encrypts seeds with AES regardles `passphrase` settings. 
+Note that `aidosd` always encrypts seeds with AES regardless `passphrase` settings.
 
 Examples of `aidosd.conf`:
 
@@ -94,7 +87,6 @@ passphrase = false
 aidos_node = http://localhost:15555
 ```
 
-
 # Usage
 
 When you run `aidosd` first time, you need to input a password to encrypt seeds in wallet.
@@ -111,13 +103,11 @@ Then `aidosd` starts to run in background.
 $ ./aidosd
 Enter password: 
 starting the aidosd server at port http://0.0.0.0:8332
-aidosd is started
+aidosd has started
 ```
 
-If you forget the password, YOU CANNOT ACCESS YOUR SEED ANYMORE (i.e. you cannot use your token).
-Please remove the database in this case, i.e. remove `aidosd.db` .
-
-
+If you forget the password, YOU CANNOT ACCESS YOUR SEED ANYMORE (i.e. you cannot use your tokens).
+Please remove the database in this case, i.e. remove `aidosd.db`.
 
 To know if it is still running, run:
 

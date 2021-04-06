@@ -71,8 +71,9 @@ func sendToWalletServers(apis []*gadk.API, txs map[gadk.Trytes]gadk.Transaction,
 	return err
 }
 
-//Recast asembles unsent txs from public wallets servers and recast them to all wallets servers.
+//Recast assembles unsent txs from public wallets servers and recast them to all wallets servers.
 func Recast(wallet string) error {
+	// TODO Remove hardcoded URLs
 	var wallets = []string{"http://wallet1.aidoskuneen.com:14266", "http://wallet2.aidoskuneen.com:14266"}
 
 	apis := make([]*gadk.API, 0, len(wallets)+1)

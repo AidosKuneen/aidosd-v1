@@ -22,7 +22,9 @@ package aidos
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
+	"math"
 
 	"github.com/AidosKuneen/gadk"
 	"github.com/boltdb/bolt"
@@ -171,6 +173,59 @@ func putAccount(tx *bolt.Tx, acc *Account) error {
 	return b.Put(toKey(acc.Name), bin)
 }
 
+func RestoreAddressesFromSeed(conf *Conf, seed gadk.Trytes) error {
+	acc := ""
+
+	return db.Update(func(tx *bolt.Tx) error {
+		ac, err := getAccount(tx, acc)
+		if err != nil {
+			return err
+		}
+		if ac != nil {
+			return errors.New("an account already exists")
+		}
+		ac = &Account{
+			Name: acc,
+			Seed: seed,
+		}
+
+		var count int
+		for i := 0; i < math.MaxInt32; i++ {
+			// TODO Move "2" magic number to a constant
+			adr, err := gadk.NewAddress(ac.Seed, i, 2)
+			if err != nil {
+				break
+			}
+
+			resp, err := conf.api.FindTransactions(&gadk.FindTransactionsRequest{
+				Addresses: []gadk.Address{adr},
+			})
+			if err != nil {
+				break
+			}
+			if len(resp.Hashes) == 0 {
+				// OK, this is the last one, break the search and remember i
+				count = i
+
+				break
+			}
+		}
+
+		addresses, err := gadk.NewAddresses(ac.Seed, 0, count, 2)
+		if err != nil {
+			return err
+		}
+		for _, adr := range addresses {
+			ac.Balances = append(ac.Balances, Balance{
+				Balance: gadk.Balance{
+					Address: adr,
+				},
+			})
+		}
+		return putAccount(tx, ac)
+	})
+}
+
 //RefreshAccount refresh all hashes and accounts from address in address.
 func RefreshAccount(conf *Conf) {
 	log.Println("starting refresh...")
@@ -233,9 +288,9 @@ func RefreshAccount(conf *Conf) {
 				return err2
 			}
 			for _, b := range bals {
-				for _, ab := range ac.Balances {
+				for i, ab := range ac.Balances {
 					if b.Address == ab.Address {
-						ab.Balance = b
+						ac.Balances[i].Balance = b
 					}
 				}
 			}
@@ -251,7 +306,7 @@ func RefreshAccount(conf *Conf) {
 
 }
 
-//ResetDB reset  hashes and balances.
+//ResetDB reset hashes and balances (basically remove all the hashes and set balances to 0)
 func ResetDB(conf *Conf) {
 	err := db.Update(func(tx *bolt.Tx) error {
 		var hs []*txstate
@@ -272,8 +327,8 @@ func ResetDB(conf *Conf) {
 		}
 		return nil
 	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }
