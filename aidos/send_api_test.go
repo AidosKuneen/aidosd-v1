@@ -258,7 +258,7 @@ func checkResponse(diff map[gadk.Address]int64, acc string,
 		if d1.stored[i].Hash() != tx.Hash() {
 			d1.t.Error("invalid trytes for store transaction")
 		}
-		if !tx.HasValidNonceMWM(15) {
+		if !tx.HasValidNonceMWM(13) {
 			d1.t.Error("invalid nonce")
 		}
 		if tx.Value > 0 {
