@@ -279,6 +279,8 @@ func Handle(conf *Conf, w http.ResponseWriter, r *http.Request) {
 		err = sendfrom(conf, &req, &res)
 	case "sendtoaddress":
 		err = sendtoaddress(conf, &req, &res)
+	case "importwallet":
+		err = importwallet(conf, &req, &res)
 	default:
 		err = errors.New(req.Method + " not supperted")
 	}

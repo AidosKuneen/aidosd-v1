@@ -36,16 +36,15 @@ func TestMain(m *testing.M) {
 	if _, err := os.Stat("../aidosd.conf"); err == nil {
 		_ = os.Rename("../aidosd.conf", "../_aidosd.conf_")
 	}
+	// TODO Use DNS instead of 78.46.250.90
 	err := ioutil.WriteFile("../aidosd.conf", []byte(`
 rpcuser=test
 rpcpassword=test
 rpcport=8332
 walletnotify=echo %s
 passphrase = true
-#aidos_node = http://localhost:14266
 testnet = true
-aidos_node = http://78.46.250.88:15555
-#testnet = false`), 0664)
+aidos_node = http://78.46.250.90:15555`), 0664)
 	if err != nil {
 		panic(err)
 	}

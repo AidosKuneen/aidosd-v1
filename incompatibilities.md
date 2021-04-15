@@ -6,16 +6,13 @@
 
 * These APIs don't have full features, these are just for a few exchange programs.
 * Error codes and error string from these commands are not same as ones from bitcoin.
-* Deposit addresses must be changed per every deposits e.g. by calling `getnewaddress` on your exchange system by your own. This library doesn't care about the changing addresses.
+* Deposit addresses must be changed per every deposits e.g. by calling `getnewaddress` on your exchange system by your
+  own. This library doesn't care about the changing addresses.
 * Formats of addresses, hashes, transactions etc are COMPLETELY different with ones in Bitcoin.
 * You cannot use "watch-only address" and "transaction comment". All of these parameters are ignored.
-* Confirmations in ADK are regarded as "finalized", so all parameters for
- number of comfirmations  are ignored.
-
-
+* Confirmations in ADK are regarded as "finalized", so all parameters for number of comfirmations are ignored.
 
 ## Details for Each APIs
-
 
 ### `getnewaddress`
 
@@ -26,7 +23,6 @@
 | Result   | Incompatibility Note  |
 | ------------- |------------- |
 | result      | ---| 
-
 
 ### `listaccounts`
 
@@ -45,7 +41,6 @@
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
 |       | | 
-
 
 | Result   | Incompatibility Note  |
 | ------------- |------------- |
@@ -80,10 +75,9 @@
 |  →iscompressed      | exists and false if address is in the wallet|
 |  →account      | ---|
 |  →hdkeypath     | always doesn't exist|
-|   →hdmasterkeyid 	    |always doesn't exist|
+|   →hdmasterkeyid        |always doesn't exist|
 
-
-###  `settxfee`
+### `settxfee`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -93,7 +87,7 @@
 | ------------- |------------- |
 | result      | always true| 
 
-###  `walletpassphrase`
+### `walletpassphrase`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -104,7 +98,7 @@
 | ------------- |------------- |
 | result      | ---| 
 
-###  `sendmany`
+### `sendmany`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -120,7 +114,7 @@
 | ------------- |------------- |
 | result      | ---| 
 
-###  `sendfrom`
+### `sendfrom`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -135,18 +129,17 @@
 | ------------- |------------- |
 | result      | None| 
 
-###  `gettransaction`
+### `gettransaction`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
 | TXID      | bundle hash| 
 | Include Watch-Only      | ignored| 
 
-
 | Result   | Incompatibility Note  |
 | ------------- |------------- |
 | result      | ---|  
-| →amount 	     | ---|  
+| →amount         | ---|  
 | →fee       | always 0|  
 |→confirmations       | 0 if not confirmed, 100000 if confirmed|  
 | →generated       |always doesn't exist|  
@@ -166,13 +159,13 @@
 | → →account       | ---|  
 |  → →address      | ---|  
 |  → →category      | always "send" or "receive" |  
-| →→amount 	     | ---|  
+| →→amount         | ---|  
 | → →vout       | always 0|  
 | →→fee       | always 0|  
 | → →abandoned       | exists and false if category is "send"|  
 | → →hex       | always empty string|  
 
-###  `getbalance`
+### `getbalance`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -184,7 +177,7 @@
 | ------------- |------------- |
 | result      | ---| 
 
-###  `sendtoaddress`
+### `sendtoaddress`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
@@ -199,7 +192,7 @@
 | ------------- |------------- |
 | result      | ---| 
 
-###  `listtransactions`
+### `listtransactions`
 
 | Parameter        | Incompatibility Note  |
 | ------------- |------------- |
