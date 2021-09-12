@@ -72,13 +72,14 @@ func PrepareTransfers(api apis, ac *Account, trs []gadk.Transfer) (gadk.Bundle, 
 	if total > ac.totalValueWithChange() {
 		return nil, errors.New("Not enough balance")
 	}
-	sufficient, err := addRemainder(api, &bundle, ac, total, false)
+	//sufficient, err := addRemainder(api, &bundle, ac, total, false)
+	_, err = addRemainder(api, &bundle, ac, total, false)
 	if err != nil {
 		return nil, err
 	}
-	if !sufficient {
-		return nil, errors.New("insufficient balance")
-	}
+	//if !sufficient {    // this is redundant as we don't use the "Change" logic, but instead work with live balances
+	//	return nil, errors.New("insufficient balance")
+	//}
 	bundle.Finalize(frags)
 	err = signInputs(ac, bundle)
 	return bundle, err
@@ -113,7 +114,8 @@ func addRemainder(api apis, bundle *gadk.Bundle, ac *Account, total int64, useCh
 				Balance: gadk.Balance{
 					Address: adr,
 				},
-				Change: remain,
+				//Change: remain,
+				Change: 0, // we add the address, but no balance yet. will be refreshed on next call
 			})
 			// Remainder bundle entry
 			bundle.Add(1, adr, remain, time.Now(), gadk.EmptyHash)
@@ -243,6 +245,11 @@ var powMutex = sync.Mutex{}
 //if you need to pow locally, you must specifiy pow func.
 //otherwirse this calls AttachToMesh API.
 func Send(conf *Conf, ac *Account, mwm int64, trs []gadk.Transfer) (gadk.Trytes, error) {
+	// first refresh our balances
+	if !refreshWithLiveBalances(ac, conf.api){
+	    // cant refresh balances only? then do a full refresh
+		RefreshAccount(conf)
+	}
 	bals := make([]Balance, len(ac.Balances))
 	copy(bals, ac.Balances)
 	bd, err := PrepareTransfers(conf.api, ac, trs)
