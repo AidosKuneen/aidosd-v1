@@ -43,7 +43,7 @@ for details about incompatibilities with Bitcoin APIs.
 	$ mkdir src
 	$ mkdir bin
 	$ mkdir pkg
-	$ exoprt GOPATH=`pwd`
+	$ export GOPATH=`pwd`
 	$ cd src
 	$ go get -u github.com/AidosKuneen/aidosd
 	$ cd github.com/AidosKuneen/aidosd

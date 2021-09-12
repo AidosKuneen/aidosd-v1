@@ -56,13 +56,37 @@ func toKey(name string) []byte {
 	return key
 }
 
+func refreshWithLiveBalances(a *Account, api apis) bool {
+    adrs := []gadk.Address{}
+	for _, bals := range a.Balances { // get and reset all addresses
+		adrs = append(adrs, bals.Balance.Address)
+	}
+	// now fetch new address balances
+	log.Println("updating balance (refreshWithLiveBalances)")
+	bals, err2 := api.Balances(adrs)
+	if err2 != nil {
+	    log.Println("cannot refresh balances only")
+		return false
+	}
+	for _, b := range bals {
+		for i, ab := range a.Balances {
+			if b.Address == ab.Address {
+				a.Balances[i].Balance = b
+				a.Balances[i].Change = 0
+			}
+		}
+	}
+	log.Println("balances refreshed")
+	return true
+}
+
 func (a *Account) totalValueWithChange() int64 {
 	var t int64
 	for _, bals := range a.Balances {
 		if bals.Balance.Value > 0 {
 			t += bals.Balance.Value
 		}
-		t += bals.Change
+		//t += bals.Change  //obsolete
 	}
 	return t
 }
