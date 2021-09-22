@@ -104,16 +104,20 @@ func getnewaddress(conf *Conf, req *Request, res *Response) error {
 		return putAccount(tx, ac)
 	})
 }
+
 func getBalance(api apis, tx *bolt.Tx) ([]Account, map[gadk.Address]int64, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
+
+
 	acs, err := listAccount(tx)
 	if err != nil {
 		return nil, nil, err
 	}
 	var address []gadk.Address
 	for _, ac := range acs {
-		for _, b := range ac.Balances {
+			refreshWithLiveBalances(&ac, api) // reload live balances from mesh
+			for _, b := range ac.Balances {
 			address = append(address, b.Address)
 		}
 	}
@@ -124,6 +128,7 @@ func getBalance(api apis, tx *bolt.Tx) ([]Account, map[gadk.Address]int64, error
 	}
 	return acs, balmap, err
 }
+
 func listaddressgroupings(conf *Conf, req *Request, res *Response) error {
 	mutex.RLock()
 	defer mutex.RUnlock()
@@ -340,7 +345,84 @@ type tx struct {
 	Hex               string      `json:"hex"`
 }
 
+
+func storeHashesUnconfirmed(api apis, hashes []gadk.Trytes) (uint, error) {
+	var hs, news []*txstate
+	var cnt uint = 0
+	err := db.Update(func(tx *bolt.Tx) error {
+		//search new tx
+		var err error
+		hs, err = getHashes(tx)
+		if err != nil {
+			log.Println("storeHashesUnconfirmed: getHashes(tx): no hashes ")
+			return err
+		}
+		news = make([]*txstate, 0, len(hashes))
+		nhashes := make([]gadk.Trytes, 0, len(hashes))
+		for _, h1 := range hashes {
+			exist := false
+			for _, h2 := range hs {
+				if h1 == h2.Hash {
+					exist = true
+					break
+				}
+			}
+			if !exist {
+				news = append(news, &txstate{Hash: h1})
+				cnt++
+				nhashes = append(nhashes, h1)
+			}
+		}
+		trs, err := api.GetTrytes(nhashes)
+		if err != nil {
+			log.Println("storeHashesUnconfirmed: GetTrytes(nhashes) err ")
+			return err
+		}
+		for _, tr := range trs.Trytes {
+			if err := putTX(tx, &tr); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return cnt, err
+	}
+	hs = append(hs, news...)
+	err = db.Update(func(tx *bolt.Tx) error {
+		return putHashes(tx, hs)
+	})
+	if err != nil {
+		return cnt, err
+	}
+	return cnt, nil
+}
+
+
+func UpdateNewTransactions(conf *Conf, a *Account){ // load new transactions, but dont yet check if confirmed or // NOTE:
+		log.Println("UpdateNewTransactions")
+	//get all trytes for all addresses
+			var adrs []gadk.Address
+			for _, bals := range a.Balances { // get and reset all addresses
+				adrs = append(adrs, bals.Balance.Address)
+			}
+
+			ft := gadk.FindTransactionsRequest{
+				Addresses: adrs,
+			}
+			r, err := conf.api.FindTransactions(&ft)
+			if len(r.Hashes) == 0 || err != nil {
+				return
+			}
+			//get newly added trytes and store
+			cnt, _ := storeHashesUnconfirmed(conf.api, r.Hashes)
+			log.Printf("added new transactions: %v \n", cnt)
+
+}
+
+
 func gettransaction(conf *Conf, req *Request, res *Response) error {
+	log.Println("gettransaction called")
 	mutex.RLock()
 	defer mutex.RUnlock()
 	data, ok := req.Params.([]interface{})
@@ -364,7 +446,19 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 	var dt *transaction
 	var detailss []*details
 	bundle := gadk.Trytes(bundlestr)
+	log.Println("gettransactions query started")
 	err := db.View(func(tx *bolt.Tx) error {
+		// load new transactions from mesh as needed
+		acs, err1 := listAccount(tx)
+		if err1 != nil {
+			return err1
+		}
+		for _, ac := range acs {
+			  log.Println("Updating new transactions")
+			  UpdateNewTransactions(conf, &ac)  // load new transactions, but dont yet check if confirmed
+				log.Println("Updating new transactions completed")
+		}
+		// end
 		trs, hs, err := findTX(tx, bundle)
 		if err != nil {
 			return err
