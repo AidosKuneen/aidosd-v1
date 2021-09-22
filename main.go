@@ -50,6 +50,7 @@ var Version = "unstable"
 
 func main() {
 	aidos.SetLog(false)
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "aidosd version %v\n", Version)
 		fmt.Fprintf(os.Stderr, "%s <options>\n", os.Args[0])
@@ -78,6 +79,7 @@ func main() {
 		}
 	}
 	if start {
+		fmt.Println("starting aidosd")
 		passwd := []byte(os.Getenv("AIDOSD_PASSWORD"))
 		if len(passwd) == 0 {
 			passwd = getPasswd()
@@ -159,28 +161,35 @@ func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
 	if err != nil {
 		return err
 	}
+
+	// perform a reset and direct reload from the mesh when starting up.
+  if err := aidos.FullRefresh(conf); err != nil {
+		 log.Fatal(err)
+	}
+	//if err := aidos.UpdateTXs(conf); err != nil {
+	//	log.Fatal(err)
+	//}
+
 	go func() {
 		for {
 			if _, err := aidos.Walletnotify(conf); err != nil {
 				log.Print(err)
 			}
+			log.Println("Walletnotify sleep")
 			time.Sleep(time.Minute)
 		}
 	}()
-	if !conf.Testnet {
-		go func() {
-			for {
-				if err := aidos.Recast(conf.Node); err != nil {
-					log.Println(err)
-				}
-				time.Sleep(30 * time.Minute)
-			}
-		}()
-	}
+	// if !conf.Testnet {
+	// 	go func() {
+	// 		for {
+	// 			if err := aidos.Recast(conf.Node); err != nil {
+	// 				log.Println(err)
+	// 			}
+	// 			time.Sleep(30 * time.Minute)
+	// 		}
+	// 	}()
+	// }
 
-	if err := aidos.UpdateTXs(conf); err != nil {
-		log.Fatal(err)
-	}
 	fmt.Println("starting the aidosd server at port http://0.0.0.0:" + conf.RPCPort)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -258,6 +267,8 @@ func getPasswd() []byte {
 }
 
 func runChild() error {
+	//aidos.SetLog(true)
+
 	runtime.SetBlockProfileRate(1)
 	go func() {
 		// TODO Remove hardcoded address and port...

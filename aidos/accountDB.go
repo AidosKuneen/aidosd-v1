@@ -72,6 +72,7 @@ func refreshWithLiveBalances(a *Account, api apis) bool {
 		for i, ab := range a.Balances {
 			if b.Address == ab.Address {
 				a.Balances[i].Balance = b
+				log.Printf("found addresses: "+string(ab.Address)+" : %v", b)
 				a.Balances[i].Change = 0
 			}
 		}
@@ -344,6 +345,7 @@ func ResetDB(conf *Conf) {
 		for _, ac := range acc {
 			for i := range ac.Balances {
 				ac.Balances[i].Balance.Value = 0
+				ac.Balances[i].Change = 0
 			}
 			if err := putAccount(tx, &ac); err != nil {
 				return err
