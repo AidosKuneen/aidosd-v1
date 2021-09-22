@@ -69,8 +69,15 @@ func PrepareTransfers(api apis, ac *Account, trs []gadk.Transfer) (gadk.Bundle, 
 		return bundle, nil
 	}
 
-	if total > ac.totalValueWithChange() {
-		return nil, errors.New("Not enough balance")
+	if total > ac.totalValueWithChange(){
+		 // aidosd thinks there are not enough balances, so lets provide the user with some additional info to troubleshoot
+		 	SetLog(true)
+			log.Printf("Not enough balance. total requested: %v, total available: %v\n",total, ac.totalValueWithChange())
+			log.Println("Known addresses in account: ")
+			for _, bals := range ac.Balances {
+			 		log.Printf("Address %s: %v\n",bals.Balance.Address.WithChecksum(), bals.Balance.Value)
+			}
+			return nil, errors.New("Not enough balance")
 	}
 	//sufficient, err := addRemainder(api, &bundle, ac, total, false)
 	_, err = addRemainder(api, &bundle, ac, total, false)
