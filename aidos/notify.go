@@ -131,7 +131,7 @@ func Walletnotify(conf *Conf) ([]string, error) {
 		}
 	}
 	//get all trytes for all addresses
-	log.Println("Walletnotify: get all trytes for all addresses")
+	//log.Println("Walletnotify: get all trytes for all addresses")
 	ft := gadk.FindTransactionsRequest{
 		Addresses: adrs,
 	}
@@ -144,7 +144,7 @@ func Walletnotify(conf *Conf) ([]string, error) {
 		return nil, nil
 	}
 	//get newly added and newly confirmed trytes.
-	log.Println("Walletnotify: compareHashes")
+	//log.Println("Walletnotify: compareHashes")
 	news, confirmed, err := compareHashes(conf.api, r.Hashes)
 	if err != nil {
 		return nil, err
@@ -196,13 +196,13 @@ func Walletnotify(conf *Conf) ([]string, error) {
 		log.Println(err)
 		return nil, err
 	}
-	log.Println("Walletnotify: refreshWithLiveBalances")
+	//log.Println("Walletnotify: refreshWithLiveBalances")
 	for _, ac := range acc {
 		refreshWithLiveBalances(&ac, conf.api)
 	}
 	//exec cmds for all new txs. %s will be the bundle hash.
 	if conf.Notify == "" {
-		log.Println("end of walletnotify1")
+		//log.Println("end of walletnotify1")
 		return nil, nil
 	}
 	result := make([]string, 0, len(bdls))
@@ -227,6 +227,6 @@ func Walletnotify(conf *Conf) ([]string, error) {
 		log.Println("executed ", cmd, ",output:", string(out))
 		result = append(result, string(out))
 	}
-	log.Println("end of walletnotify")
+	//log.Println("end of walletnotify")
 	return result, nil
 }

@@ -174,7 +174,7 @@ func FullRefresh(conf *Conf) error {
 
 //UpdateTXs update TX db from hashes DB.
 func UpdateTXs(conf *Conf) error {
-	log.Println("Updating transactions in DB...")
+	//log.Println("Updating transactions in DB...")
 
 	err := db.Update(func(tx *bolt.Tx) error {
 		hs, err := getHashes(tx)
@@ -206,6 +206,6 @@ func UpdateTXs(conf *Conf) error {
 		}
 		return nil
 	})
-	log.Println("Update done.")
+	//log.Println("Update done.")
 	return err
 }

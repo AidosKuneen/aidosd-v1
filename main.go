@@ -164,7 +164,7 @@ func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
 
     // check for multiple accounts:
 	aidos.ListAndSelectAccount(conf);
-	
+
 	// perform a reset and direct reload from the mesh when starting up.
     if err := aidos.FullRefresh(conf); err != nil {
 		 log.Fatal(err)
@@ -178,7 +178,7 @@ func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
 			if _, err := aidos.Walletnotify(conf); err != nil {
 				log.Print(err)
 			}
-			log.Println("Walletnotify sleep")
+			//log.Println("Walletnotify sleep")
 			time.Sleep(time.Minute)
 		}
 	}()

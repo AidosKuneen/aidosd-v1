@@ -354,7 +354,7 @@ func storeHashesUnconfirmed(api apis, hashes []gadk.Trytes) (uint, error) {
 		var err error
 		hs, err = getHashes(tx)
 		if err != nil {
-			log.Println("storeHashesUnconfirmed: getHashes(tx): no hashes ")
+			//log.Println("storeHashesUnconfirmed: getHashes(tx): no hashes ")
 			return err
 		}
 		news = make([]*txstate, 0, len(hashes))
@@ -375,7 +375,7 @@ func storeHashesUnconfirmed(api apis, hashes []gadk.Trytes) (uint, error) {
 		}
 		trs, err := api.GetTrytes(nhashes)
 		if err != nil {
-			log.Println("storeHashesUnconfirmed: GetTrytes(nhashes) err ")
+			//log.Println("storeHashesUnconfirmed: GetTrytes(nhashes) err ")
 			return err
 		}
 		for _, tr := range trs.Trytes {
@@ -400,7 +400,7 @@ func storeHashesUnconfirmed(api apis, hashes []gadk.Trytes) (uint, error) {
 
 
 func UpdateNewTransactions(conf *Conf, a *Account){ // load new transactions, but dont yet check if confirmed or // NOTE:
-		log.Println("UpdateNewTransactions")
+		//log.Println("UpdateNewTransactions")
 	//get all trytes for all addresses
 			var adrs []gadk.Address
 			for _, bals := range a.Balances { // get and reset all addresses
@@ -422,7 +422,7 @@ func UpdateNewTransactions(conf *Conf, a *Account){ // load new transactions, bu
 
 
 func gettransaction(conf *Conf, req *Request, res *Response) error {
-	log.Println("gettransaction called")
+	//log.Println("gettransaction called")
 	mutex.RLock()
 	defer mutex.RUnlock()
 	data, ok := req.Params.([]interface{})
@@ -446,7 +446,7 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 	var dt *transaction
 	var detailss []*details
 	bundle := gadk.Trytes(bundlestr)
-	log.Println("gettransactions query started")
+	//log.Println("gettransactions query started")
 	err := db.View(func(tx *bolt.Tx) error {
 		// load new transactions from mesh as needed
 		acs, err1 := listAccount(tx)
@@ -454,9 +454,9 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 			return err1
 		}
 		for _, ac := range acs {
-			  log.Println("Updating new transactions")
+			  //log.Println("Updating new transactions")
 			  UpdateNewTransactions(conf, &ac)  // load new transactions, but dont yet check if confirmed
-				log.Println("Updating new transactions completed")
+				//log.Println("Updating new transactions completed")
 		}
 		// end
 		trs, hs, err := findTX(tx, bundle)
