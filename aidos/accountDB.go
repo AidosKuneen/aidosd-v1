@@ -72,12 +72,12 @@ func refreshWithLiveBalances(a *Account, api apis) bool {
 		for i, ab := range a.Balances {
 			if b.Address == ab.Address {
 				a.Balances[i].Balance = b
-				log.Printf("found addresses: "+string(ab.Address)+" : %v", b)
+				//log.Printf("found addresses: "+string(ab.Address)+" : %v", b)
 				a.Balances[i].Change = 0
 			}
 		}
 	}
-	log.Println("balances refreshed")
+	//log.Println("balances refreshed")
 	return true
 }
 
@@ -260,13 +260,15 @@ func RestoreAddressesFromSeed(conf *Conf, seed gadk.Trytes) error {
 
 func ListAndSelectAccount(conf  *Conf){
 	  globalAccountNo = conf.accountNo
-	  log.Println("Checking for multiple accounts: ")
-		db.Update(func(tx *bolt.Tx) error {
+	  db.Update(func(tx *bolt.Tx) error {
 			acc, err2 := listAccount(tx)
 			if err2 != nil {
 				return err2
 			}
 			var cnt int = 0
+			if len(acc) > 1 {
+				SetLog(true);
+			}
 			for idx, ac := range acc {
 				// get known balance
 				bal := ac.totalValueWithChange()
@@ -280,7 +282,6 @@ func ListAndSelectAccount(conf  *Conf){
 			}
 			return nil
 		})
-
 }
 
 //RefreshAccount refresh all hashes and accounts from address in address.
@@ -300,7 +301,7 @@ func RefreshAccount(conf *Conf) {
 			return err2
 		}
 		for _, ac := range acc {
-			log.Println("processing account", ac.Name)
+			//log.Println("processing account", ac.Name)
 			var adrs []gadk.Address
 			for _, b := range ac.Balances {
 				adrs = append(adrs, b.Address)
@@ -313,7 +314,7 @@ func RefreshAccount(conf *Conf) {
 			if err2 != nil {
 				return err2
 			}
-			log.Println("updating hashes")
+		//	log.Println("updating hashes")
 			for _, h1 := range r.Hashes {
 				exist := false
 				for _, h2 := range hs {
@@ -339,7 +340,7 @@ func RefreshAccount(conf *Conf) {
 			// 	}
 			// 	hs[i].Confirmed = inc.States[0]
 			// }
-			log.Println("updating balance")
+			//log.Println("updating balance")
 			bals, err2 := conf.api.Balances(adrs)
 			if err2 != nil {
 				return err2
