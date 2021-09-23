@@ -162,8 +162,11 @@ func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
 		return err
 	}
 
+    // check for multiple accounts:
+	aidos.ListAndSelectAccount(conf);
+	
 	// perform a reset and direct reload from the mesh when starting up.
-  if err := aidos.FullRefresh(conf); err != nil {
+    if err := aidos.FullRefresh(conf); err != nil {
 		 log.Fatal(err)
 	}
 	//if err := aidos.UpdateTXs(conf); err != nil {

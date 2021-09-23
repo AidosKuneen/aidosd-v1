@@ -138,6 +138,9 @@ func findAddress(tx *bolt.Tx, adr gadk.Address) (*Account, int, error) {
 	}
 	return result, index, nil
 }
+
+var globalAccountNo int = -1
+
 func listAccount(tx *bolt.Tx) ([]Account, error) {
 	var asc []Account
 	// Assume bucket exists and has keys
@@ -155,8 +158,11 @@ func listAccount(tx *bolt.Tx) ([]Account, error) {
 		ac.Seed = gadk.Trytes(seed)
 		asc = append(asc, ac)
 	}
+  if (globalAccountNo == -1){ //no account unspecified
+		return asc, nil
+	}
 
-	return asc, nil
+	return asc[globalAccountNo:globalAccountNo+1], nil // return specific account slice
 }
 
 func getAccount(tx *bolt.Tx, name string) (*Account, error) {
@@ -249,6 +255,32 @@ func RestoreAddressesFromSeed(conf *Conf, seed gadk.Trytes) error {
 		}
 		return putAccount(tx, ac)
 	})
+}
+
+
+func ListAndSelectAccount(conf  *Conf){
+	  globalAccountNo = conf.accountNo
+	  log.Println("Checking for multiple accounts: ")
+		db.Update(func(tx *bolt.Tx) error {
+			acc, err2 := listAccount(tx)
+			if err2 != nil {
+				return err2
+			}
+			var cnt int = 0
+			for idx, ac := range acc {
+				// get known balance
+				bal := ac.totalValueWithChange()
+				log.Printf("Account found: Account number %v : %s, Balance: %v \n", idx, ac.Name, bal)
+				cnt++
+			}
+			if cnt > 1 && conf.accountNo == -1 {
+				log.Fatal("\n**************************\nERROR: More than one account found! Please specify the account to use in aidosd.conf: e.g. account_no=0  \n\n**********************\n  ")
+			} else if conf.accountNo >= 0 {
+				log.Println("Account selected by aidosd.conf: ", conf.accountNo)
+			}
+			return nil
+		})
+
 }
 
 //RefreshAccount refresh all hashes and accounts from address in address.
