@@ -466,6 +466,24 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 		if len(trs) == 0 {
 			return errors.New("bundle not found")
 		}
+		
+		// check inclusion states for unconfirmed (and store if cound confirmed)
+		log.Println("Get latest milestone for inclusion check")
+		ni, _ := conf.api.GetNodeInfo()
+		for _, h := range hs {
+			if !h.Confirmed {
+				 log.Println("found unconfirmed. checking inclusion state...")
+				 inc, err1 := conf.api.GetInclusionStates([]gadk.Trytes{h.Hash}, []gadk.Trytes{ni.LatestMilestone})
+				 if err1 == nil && len(inc.States) > 0 && inc.States[0] {
+					 h.Confirmed = true
+					 err = db.Update(func(tx *bolt.Tx) error {
+				 		 return putHashes(tx, hs) // store
+				 	 })
+				 }
+			}
+		}
+		log.Println("includsion state completed")
+		
 		detailss = make([]*details, 0, len(trs))
 		indice := make(map[int64]struct{})
 		for i, tr := range trs {
