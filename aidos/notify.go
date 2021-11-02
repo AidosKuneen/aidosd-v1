@@ -106,6 +106,8 @@
   	return ret, confirmed, nil
   }
 
+  var ignoreAddr []gadk.Address
+	var addressCcheckPerformed bool = false
   //Walletnotify exec walletnotify scripts when receivng tx and tx is confirmed.
   func Walletnotify(conf *Conf) ([]string, error) {
   	log.Println("starting walletnotify...")
@@ -127,41 +129,48 @@
   	}
   	for _, ac := range acc {
   		for _, b := range ac.Balances {
-  			adrs = append(adrs, b.Address)
+				if !contains(ignoreAddr, b.Address){
+  				adrs = append(adrs, b.Address)
+				}
   		}
   	}
   	//get all trytes for all addresses
 
 		var extras []gadk.Trytes
-    cntchunk := 0
-		
-		for len(adrs) > 50 { // need to break it into 10 chunks
-			  cntchunk ++
-			  log.Println("more than 50 addresses(",len(adrs),"). Processing chunk",cntchunk)
-				adrs_500 := adrs[0:50]
-				adrs = adrs[50:]
+    chunksize := 100
+		if len(adrs) < chunksize {
+			chunksize = len(adrs)
+		}
+		for len(adrs) > 0 { // need to break it into 100 chunks
+			  adrs_100 := adrs[0:chunksize]
+				adrs = adrs[chunksize:]
 
 				ft := gadk.FindTransactionsRequest{
-					Addresses: adrs_500,
+					Addresses: adrs_100,
 				}
 
 				r, err := conf.api.FindTransactions(&ft)
 				if err != nil {
-					//return nil, err
+					// invalid address. lets find it
+					for adi, _ := range adrs_100 {
+							 ftx := gadk.FindTransactionsRequest{
+								 Addresses: adrs_100[adi:adi+1],
+							 }
+							 rx, errx := conf.api.FindTransactions(&ftx)
+							 if (errx!=nil){
+								 ignoreAddr = append(ignoreAddr,adrs_100[adi] )
+							 } else {
+								 extras = append(extras,rx.Hashes ...)
+							 }
+				  }
+				} else {
+					extras = append(extras,r.Hashes ...)
 				}
-				extras = append(extras,r.Hashes ...)
+				if len(adrs) < chunksize {
+					chunksize = len(adrs)
+				}
 		}
 
-		// and the remaining ones..
-
-  	ft := gadk.FindTransactionsRequest{
-  		Addresses: adrs,
-  	}
-  	r, err := conf.api.FindTransactions(&ft)
-  	if err != nil {
-  		return nil, err
-  	}
-		extras = append(extras,r.Hashes ...)
 		if len(extras) == 0 {
   		log.Println("no tx for addresses in wallet")
   		return nil, nil
@@ -248,3 +257,13 @@
   	log.Println("end of walletnotify")
   	return result, nil
   }
+
+	func contains(s []gadk.Address, str gadk.Address) bool {
+			for _, v := range s {
+				if string(v) == string(str) {
+					return true
+				}
+			}
+
+			return false
+		}
