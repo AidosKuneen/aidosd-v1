@@ -26,7 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/AidosKuneen/gadk"
-	"github.com/boltdb/bolt"
+	"github.com/boltdb-go/bolt"
 	"sync"
 	"time"
 )

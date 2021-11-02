@@ -23,7 +23,7 @@ package aidos
 import (
 	"errors"
 	"github.com/AidosKuneen/gadk"
-	"github.com/boltdb/bolt"
+	"github.com/boltdb-go/bolt"
 	"log"
 )
 
@@ -104,20 +104,16 @@ func getnewaddress(conf *Conf, req *Request, res *Response) error {
 		return putAccount(tx, ac)
 	})
 }
-
 func getBalance(api apis, tx *bolt.Tx) ([]Account, map[gadk.Address]int64, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
-
-
 	acs, err := listAccount(tx)
 	if err != nil {
 		return nil, nil, err
 	}
 	var address []gadk.Address
 	for _, ac := range acs {
-			refreshWithLiveBalances(&ac, api) // reload live balances from mesh
-			for _, b := range ac.Balances {
+		for _, b := range ac.Balances {
 			address = append(address, b.Address)
 		}
 	}
@@ -128,7 +124,6 @@ func getBalance(api apis, tx *bolt.Tx) ([]Account, map[gadk.Address]int64, error
 	}
 	return acs, balmap, err
 }
-
 func listaddressgroupings(conf *Conf, req *Request, res *Response) error {
 	mutex.RLock()
 	defer mutex.RUnlock()
@@ -345,84 +340,7 @@ type tx struct {
 	Hex               string      `json:"hex"`
 }
 
-
-func storeHashesUnconfirmed(api apis, hashes []gadk.Trytes) (uint, error) {
-	var hs, news []*txstate
-	var cnt uint = 0
-	err := db.Update(func(tx *bolt.Tx) error {
-		//search new tx
-		var err error
-		hs, err = getHashes(tx)
-		if err != nil {
-			//log.Println("storeHashesUnconfirmed: getHashes(tx): no hashes ")
-			return err
-		}
-		news = make([]*txstate, 0, len(hashes))
-		nhashes := make([]gadk.Trytes, 0, len(hashes))
-		for _, h1 := range hashes {
-			exist := false
-			for _, h2 := range hs {
-				if h1 == h2.Hash {
-					exist = true
-					break
-				}
-			}
-			if !exist {
-				news = append(news, &txstate{Hash: h1})
-				cnt++
-				nhashes = append(nhashes, h1)
-			}
-		}
-		trs, err := api.GetTrytes(nhashes)
-		if err != nil {
-			//log.Println("storeHashesUnconfirmed: GetTrytes(nhashes) err ")
-			return err
-		}
-		for _, tr := range trs.Trytes {
-			if err := putTX(tx, &tr); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return cnt, err
-	}
-	hs = append(hs, news...)
-	err = db.Update(func(tx *bolt.Tx) error {
-		return putHashes(tx, hs)
-	})
-	if err != nil {
-		return cnt, err
-	}
-	return cnt, nil
-}
-
-
-func UpdateNewTransactions(conf *Conf, a *Account){ // load new transactions, but dont yet check if confirmed or // NOTE:
-		//log.Println("UpdateNewTransactions")
-	//get all trytes for all addresses
-			var adrs []gadk.Address
-			for _, bals := range a.Balances { // get and reset all addresses
-				adrs = append(adrs, bals.Balance.Address)
-			}
-
-			ft := gadk.FindTransactionsRequest{
-				Addresses: adrs,
-			}
-			r, err := conf.api.FindTransactions(&ft)
-			if len(r.Hashes) == 0 || err != nil {
-				return
-			}
-			//get newly added trytes and store
-			cnt, _ := storeHashesUnconfirmed(conf.api, r.Hashes)
-			log.Printf("added new transactions: %v \n", cnt)
-
-}
-
-
 func gettransaction(conf *Conf, req *Request, res *Response) error {
-	//log.Println("gettransaction called")
 	mutex.RLock()
 	defer mutex.RUnlock()
 	data, ok := req.Params.([]interface{})
@@ -446,19 +364,34 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 	var dt *transaction
 	var detailss []*details
 	bundle := gadk.Trytes(bundlestr)
-	//log.Println("gettransactions query started")
+	var allConfirmed bool = true
+
+  // check inclusion state (live mesh lookup)
+  var hashes_to_check []gadk.Trytes
+
+	err_check := db.View(func(tx *bolt.Tx) error {
+		trs, hs, err := findTX(tx, bundle)
+		if err != nil {
+			return err
+		}
+		hashes_to_check = make([]gadk.Trytes, 0, len(hs))
+		if len(trs) == 0 {
+			return errors.New("bundle not found")
+		}
+    for i_check, tr_check_confirmed := range hs {
+			// if unconfirmed, trigger a live mesh lookup
+			if !hs[i_check].Confirmed {
+				allConfirmed = false; // have to trigger mesh lookup
+				hashes_to_check = append(hashes_to_check, tr_check_confirmed.Hash)
+			}
+		}
+		return nil
+	})
+	if err_check != nil {
+		return err_check
+	}
+
 	err := db.View(func(tx *bolt.Tx) error {
-		// load new transactions from mesh as needed
-		acs, err1 := listAccount(tx)
-		if err1 != nil {
-			return err1
-		}
-		for _, ac := range acs {
-			  //log.Println("Updating new transactions")
-			  UpdateNewTransactions(conf, &ac)  // load new transactions, but dont yet check if confirmed
-				//log.Println("Updating new transactions completed")
-		}
-		// end
 		trs, hs, err := findTX(tx, bundle)
 		if err != nil {
 			return err
@@ -466,26 +399,29 @@ func gettransaction(conf *Conf, req *Request, res *Response) error {
 		if len(trs) == 0 {
 			return errors.New("bundle not found")
 		}
-		
-		// check inclusion states for unconfirmed (and store if cound confirmed)
-		log.Println("Get latest milestone for inclusion check")
-		ni, _ := conf.api.GetNodeInfo()
-		for _, h := range hs {
-			if !h.Confirmed {
-				 log.Println("found unconfirmed. checking inclusion state...")
-				 inc, err1 := conf.api.GetInclusionStates([]gadk.Trytes{h.Hash}, []gadk.Trytes{ni.LatestMilestone})
-				 if err1 == nil && len(inc.States) > 0 && inc.States[0] {
-					 h.Confirmed = true
-					 err = db.Update(func(tx *bolt.Tx) error {
-				 		 return putHashes(tx, hs) // store
-				 	 })
-				 }
-			}
-		}
-		log.Println("includsion state completed")
-		
 		detailss = make([]*details, 0, len(trs))
 		indice := make(map[int64]struct{})
+
+		// found some unconfirmed, so perform mesh lookup and DB Update
+		if !allConfirmed {
+			//get newly added and newly confirmed trytes direclty from mesh
+			ni, errNode := conf.api.GetNodeInfo()
+			if errNode != nil {
+				return nil
+			}
+			inc, err := conf.api.GetInclusionStates(hashes_to_check, []gadk.Trytes{ni.LatestMilestone})
+			if err != nil {
+				return err
+			}
+			if len(inc.States) > 0 {
+				for i, i_included := range inc.States {
+					if i_included {
+							hs[i].Confirmed = true
+					}
+				}
+			}
+		}
+
 		for i, tr := range trs {
 			dt2, errr := getTransaction(tx, conf, tr, hs[i].Confirmed)
 			if errr != nil {

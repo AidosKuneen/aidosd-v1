@@ -29,7 +29,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/boltdb/bolt"
+	"github.com/boltdb-go/bolt"
 )
 
 var (

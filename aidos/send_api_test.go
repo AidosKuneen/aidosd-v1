@@ -22,7 +22,7 @@ package aidos
 
 import (
 	"github.com/AidosKuneen/gadk"
-	"github.com/boltdb/bolt"
+	"github.com/boltdb-go/bolt"
 	"testing"
 	"time"
 )

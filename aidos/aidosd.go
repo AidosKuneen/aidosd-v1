@@ -38,7 +38,7 @@ import (
 	"time"
 
 	"github.com/AidosKuneen/gadk"
-	"github.com/boltdb/bolt"
+	"github.com/boltdb-go/bolt"
 	"github.com/natefinch/lumberjack"
 )
 
@@ -76,8 +76,8 @@ func ParseConf(cfile string) *Conf {
 	conf := Conf{
 		RPCPort:    "8332",
 		PassPhrase: true,
-		accountNo: -1 } // -1 means not set
-
+		accountNo: -1,
+	}
 
 	f, err := os.Open(cfile)
 	if err != nil {
@@ -111,11 +111,11 @@ func ParseConf(cfile string) *Conf {
 			}
 			conf.RPCPort = states[1]
 		case "account_no":
-			conf.accountNo, err = strconv.Atoi(states[1])
-			if err != nil {
-				panic("accountno must be integer " + states[1])
-			}
-			globalAccountNo = conf.accountNo
+				conf.accountNo, err = strconv.Atoi(states[1])
+				if err != nil {
+					panic("accountno must be integer " + states[1])
+				}
+				globalAccountNo = conf.accountNo
 		case "walletnotify":
 			conf.Notify = states[1]
 		case "aidos_node":

@@ -27,7 +27,7 @@ import (
 	"math"
 
 	"github.com/AidosKuneen/gadk"
-	"github.com/boltdb/bolt"
+	"github.com/boltdb-go/bolt"
 )
 
 var accountDB = []byte("accounts")
@@ -56,38 +56,13 @@ func toKey(name string) []byte {
 	return key
 }
 
-func refreshWithLiveBalances(a *Account, api apis) bool {
-    adrs := []gadk.Address{}
-	for _, bals := range a.Balances { // get and reset all addresses
-		adrs = append(adrs, bals.Balance.Address)
-	}
-	// now fetch new address balances
-	log.Println("updating balance (refreshWithLiveBalances)")
-	bals, err2 := api.Balances(adrs)
-	if err2 != nil {
-	    log.Println("cannot refresh balances only")
-		return false
-	}
-	for _, b := range bals {
-		for i, ab := range a.Balances {
-			if b.Address == ab.Address {
-				a.Balances[i].Balance = b
-				//log.Printf("found addresses: "+string(ab.Address)+" : %v", b)
-				a.Balances[i].Change = 0
-			}
-		}
-	}
-	//log.Println("balances refreshed")
-	return true
-}
-
 func (a *Account) totalValueWithChange() int64 {
 	var t int64
 	for _, bals := range a.Balances {
 		if bals.Balance.Value > 0 {
 			t += bals.Balance.Value
 		}
-		//t += bals.Change  //obsolete
+		t += bals.Change
 	}
 	return t
 }
@@ -158,10 +133,9 @@ func listAccount(tx *bolt.Tx) ([]Account, error) {
 		ac.Seed = gadk.Trytes(seed)
 		asc = append(asc, ac)
 	}
-  if (globalAccountNo == -1){ //no account unspecified
-		return asc, nil
-	}
-
+	if (globalAccountNo == -1){ //no account unspecified
+			return asc, nil
+		}
 	return asc[globalAccountNo:globalAccountNo+1], nil // return specific account slice
 }
 
@@ -257,18 +231,15 @@ func RestoreAddressesFromSeed(conf *Conf, seed gadk.Trytes) error {
 	})
 }
 
-
 func ListAndSelectAccount(conf  *Conf){
 	  globalAccountNo = conf.accountNo
-	  db.Update(func(tx *bolt.Tx) error {
+	  log.Println("Checking for multiple accounts: ")
+		db.Update(func(tx *bolt.Tx) error {
 			acc, err2 := listAccount(tx)
 			if err2 != nil {
 				return err2
 			}
 			var cnt int = 0
-			if len(acc) > 1 {
-				SetLog(true);
-			}
 			for idx, ac := range acc {
 				// get known balance
 				bal := ac.totalValueWithChange()
@@ -282,6 +253,7 @@ func ListAndSelectAccount(conf  *Conf){
 			}
 			return nil
 		})
+
 }
 
 //RefreshAccount refresh all hashes and accounts from address in address.
@@ -301,7 +273,7 @@ func RefreshAccount(conf *Conf) {
 			return err2
 		}
 		for _, ac := range acc {
-			//log.Println("processing account", ac.Name)
+			log.Println("processing account", ac.Name)
 			var adrs []gadk.Address
 			for _, b := range ac.Balances {
 				adrs = append(adrs, b.Address)
@@ -314,7 +286,7 @@ func RefreshAccount(conf *Conf) {
 			if err2 != nil {
 				return err2
 			}
-		//	log.Println("updating hashes")
+			log.Println("updating hashes")
 			for _, h1 := range r.Hashes {
 				exist := false
 				for _, h2 := range hs {
@@ -340,7 +312,7 @@ func RefreshAccount(conf *Conf) {
 			// 	}
 			// 	hs[i].Confirmed = inc.States[0]
 			// }
-			//log.Println("updating balance")
+			log.Println("updating balance")
 			bals, err2 := conf.api.Balances(adrs)
 			if err2 != nil {
 				return err2
@@ -378,7 +350,6 @@ func ResetDB(conf *Conf) {
 		for _, ac := range acc {
 			for i := range ac.Balances {
 				ac.Balances[i].Balance.Value = 0
-				ac.Balances[i].Change = 0
 			}
 			if err := putAccount(tx, &ac); err != nil {
 				return err

@@ -26,7 +26,7 @@ import (
 	"log"
 
 	"github.com/AidosKuneen/gadk"
-	"github.com/boltdb/bolt"
+	"github.com/boltdb-go/bolt"
 )
 
 var hashDB = []byte("hashes")
@@ -158,24 +158,9 @@ func findTX(tx *bolt.Tx, bundle gadk.Trytes) ([]*gadk.Transaction, []*txstate, e
 	return trs, hashes, nil
 }
 
-func FullRefresh(conf *Conf) error {
-		log.Println("Performing a full DB refresh...")
-		// first we reset the DB, as we will reload from Mesh
-	  ResetDB(conf) // this sets all balances to 0, and clears stored getHashes
-		RefreshAccount(conf) // load transaction hashes, and get up to dat balances from mesh
-		err := UpdateTXs(conf)	 //UpdateTXs update TX db from hashes DB.
-		//
-		// Note: at this stage all transactons are considered unconfirmed, walletnotify will update these at the first call.
-		//       This means that the notification will recast/notify all past confirmations, it is up to the exchange to check
-		//		   the notification/bundle/transaction against already processed bundles/GetTransactionsToApprove
-
-		return err
-}
-
 //UpdateTXs update TX db from hashes DB.
 func UpdateTXs(conf *Conf) error {
-	//log.Println("Updating transactions in DB...")
-
+	log.Println("Updating transactions in DB...")
 	err := db.Update(func(tx *bolt.Tx) error {
 		hs, err := getHashes(tx)
 		if err != nil {
@@ -206,6 +191,6 @@ func UpdateTXs(conf *Conf) error {
 		}
 		return nil
 	})
-	//log.Println("Update done.")
+	log.Println("Update done.")
 	return err
 }

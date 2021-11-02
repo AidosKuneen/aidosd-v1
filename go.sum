@@ -2,6 +2,8 @@ github.com/AidosKuneen/gadk v0.0.0-20210301173857-93b5eda0f71b h1:r2ZTw534aa6a3A
 github.com/AidosKuneen/gadk v0.0.0-20210301173857-93b5eda0f71b/go.mod h1:pTq9FrPZdCaJq49inbxtPAKJLM7LY+lkekoRa/p7nN4=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/boltdb-go/bolt v0.0.0-20211101131449-a1f3d95840d6 h1:rou5DCJaYfU6SSItc/Z7oMki71oRD/someOr6NtypFk=
+github.com/boltdb-go/bolt v0.0.0-20211101131449-a1f3d95840d6/go.mod h1:ujccL65GS0VxMi0SPifnHwzh8v8cHaFuso1GK85IEJw=
 github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
 github.com/gorilla/rpc v1.2.0 h1:WvvdC2lNeT1SP32zrIce5l0ECBfbAlmrmSBsuc57wfk=

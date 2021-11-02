@@ -2,7 +2,7 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/AidosKuneen/aidosd/LICENSE)
 # aidosd
 
-Aidosd is command line wallet for ADK which you can interact with via RPC API calls which make it easier for various exchanges to integrate ADK in their software. For now implemented APIs are:
+aidosd is a deamon which acts as bitcoind for adk. For now implemented APIs are:
 
 ## NOTE: DON'T USE MULTIPLE ACCOUNTS. Account feature will be removed in a later version.
 
@@ -18,7 +18,6 @@ Aidosd is command line wallet for ADK which you can interact with via RPC API ca
 * `getbalance`
 * `sendtoaddress`
 * `listtransactions`
-* `importwallet` (**EXPERIMENTAL**)
 
 and `walletnotify` feature.
 
@@ -43,7 +42,7 @@ for details about incompatibilities with Bitcoin APIs.
 	$ mkdir src
 	$ mkdir bin
 	$ mkdir pkg
-	$ export GOPATH=`pwd`
+	$ exoprt GOPATH=`pwd`
 	$ cd src
 	$ go get -u github.com/AidosKuneen/aidosd
 	$ cd github.com/AidosKuneen/aidosd
