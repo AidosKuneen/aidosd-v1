@@ -1,15 +1,15 @@
   // Copyright (c) 2017 Aidos Developer
-  
+
   // Permission is hereby granted, free of charge, to any person obtaining a copy
   // of this software and associated documentation files (the "Software"), to deal
   // in the Software without restriction, including without limitation the rights
   // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   // copies of the Software, and to permit persons to whom the Software is
   // furnished to do so, subject to the following conditions:
-  
+
   // The above copyright notice and this permission notice shall be included in
   // all copies or substantial portions of the Software.
-  
+
   // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -17,29 +17,29 @@
   // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   // THE SOFTWARE.
-  
+
   package aidos
-  
+
   import (
   	"encoding/json"
   	"errors"
   	"log"
   	"math"
-  
+
   	"github.com/AidosKuneen/gadk"
   	"github.com/boltdb-go/bolt"
   )
-  
+
   var accountDB = []byte("accounts")
-  
+
   var lastAccount *Account
-  
+
   //Balance represents balance, with change value.
   type Balance struct {
   	gadk.Balance
   	Change int64
   }
-  
+
   //Account represents account for bitcoind api.
   type Account struct {
   	Name     string
@@ -47,7 +47,7 @@
   	EncSeed  []byte
   	Balances []Balance
   }
-  
+
   func toKey(name string) []byte {
   	key := []byte(name)
   	if name == "" {
@@ -55,18 +55,18 @@
   	}
   	return key
   }
-  
+
   func (a *Account) totalValueWithChange() int64 {
   	var t int64
   	for _, bals := range a.Balances {
   		if bals.Balance.Value > 0 {
   			t += bals.Balance.Value
   		}
-  		t += bals.Change
+  		//t += bals.Change
   	}
   	return t
   }
-  
+
   func (a *Account) search(adr gadk.Address) int {
   	index := -1
   	for i, bal := range a.Balances {
@@ -76,7 +76,7 @@
   	}
   	return index
   }
-  
+
   func findAddress(tx *bolt.Tx, adr gadk.Address) (*Account, int, error) {
   	if lastAccount != nil {
   		i := lastAccount.search(adr)
@@ -113,9 +113,10 @@
   	}
   	return result, index, nil
   }
-  
+
   var globalAccountNo int = -1
-  
+  var globalAccount Account
+
   func listAccount(tx *bolt.Tx) ([]Account, error) {
   	var asc []Account
   	// Assume bucket exists and has keys
@@ -138,8 +139,11 @@
   		}
   	return asc[globalAccountNo:globalAccountNo+1], nil // return specific account slice
   }
-  
+
   func getAccount(tx *bolt.Tx, name string) (*Account, error) {
+    if globalAccountNo > -1 {
+      return &globalAccount, nil
+    }
   	if lastAccount != nil && lastAccount.Name == name {
   		return lastAccount, nil
   	}
@@ -159,7 +163,7 @@
   	ac.Seed = gadk.Trytes(seed)
   	return &ac, nil
   }
-  
+
   func putAccount(tx *bolt.Tx, acc *Account) error {
   	if lastAccount != nil && lastAccount.Name == acc.Name {
   		lastAccount = acc
@@ -177,10 +181,10 @@
   	}
   	return b.Put(toKey(acc.Name), bin)
   }
-  
+
   func RestoreAddressesFromSeed(conf *Conf, seed gadk.Trytes) error {
   	acc := ""
-  
+
   	return db.Update(func(tx *bolt.Tx) error {
   		ac, err := getAccount(tx, acc)
   		if err != nil {
@@ -193,7 +197,7 @@
   			Name: acc,
   			Seed: seed,
   		}
-  
+
   		var count int
   		for i := 0; i < math.MaxInt32; i++ {
   			// TODO Move "2" magic number to a constant
@@ -201,7 +205,7 @@
   			if err != nil {
   				break
   			}
-  
+
   			resp, err := conf.api.FindTransactions(&gadk.FindTransactionsRequest{
   				Addresses: []gadk.Address{adr},
   			})
@@ -211,11 +215,11 @@
   			if len(resp.Hashes) == 0 {
   				// OK, this is the last one, break the search and remember i
   				count = i
-  
+
   				break
   			}
   		}
-  
+
   		addresses, err := gadk.NewAddresses(ac.Seed, 0, count, 2)
   		if err != nil {
   			return err
@@ -230,7 +234,7 @@
   		return putAccount(tx, ac)
   	})
   }
-  
+
   func ListAndSelectAccount(conf  *Conf){
   	  globalAccountNo = conf.accountNo
   	  log.Println("Checking for multiple accounts: ")
@@ -245,6 +249,7 @@
   				bal := ac.totalValueWithChange()
   				log.Printf("Account found: Account number %v : %s, Balance: %v \n", idx, ac.Name, bal)
   				cnt++
+          globalAccount = ac
   			}
   			if cnt > 1 && conf.accountNo == -1 {
   				log.Fatal("\n**************************\nERROR: More than one account found! Please specify the account to use in aidosd.conf: e.g. account_no=0  \n\n**********************\n  ")
@@ -253,9 +258,9 @@
   			}
   			return nil
   		})
-  
+
   }
-  
+
   //RefreshAccount refresh all hashes and accounts from address in address.
   func RefreshAccount(conf *Conf) {
   	log.Println("starting refresh...")
@@ -278,7 +283,7 @@
   			for _, b := range ac.Balances {
   				adrs = append(adrs, b.Address)
   			}
-  
+
   			ft := gadk.FindTransactionsRequest{
   				Addresses: adrs,
   			}
@@ -333,9 +338,9 @@
   	if err != nil {
   		log.Fatal(err)
   	}
-  
+
   }
-  
+
   //ResetDB reset hashes and balances (basically remove all the hashes and set balances to 0)
   func ResetDB(conf *Conf) {
   	err := db.Update(func(tx *bolt.Tx) error {
@@ -357,9 +362,8 @@
   		}
   		return nil
   	})
-  
+
   	if err != nil {
   		log.Fatal(err)
   	}
   }
-  

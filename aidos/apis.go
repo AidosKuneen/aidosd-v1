@@ -1,15 +1,15 @@
   // Copyright (c) 2017 Aidos Developer
-  
+
   // Permission is hereby granted, free of charge, to any person obtaining a copy
   // of this software and associated documentation files (the "Software"), to deal
   // in the Software without restriction, including without limitation the rights
   // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   // copies of the Software, and to permit persons to whom the Software is
   // furnished to do so, subject to the following conditions:
-  
+
   // The above copyright notice and this permission notice shall be included in
   // all copies or substantial portions of the Software.
-  
+
   // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -17,16 +17,16 @@
   // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   // THE SOFTWARE.
-  
+
   package aidos
-  
+
   import (
   	"errors"
   	"github.com/AidosKuneen/gadk"
   	"github.com/boltdb-go/bolt"
   	"log"
   )
-  
+
   func importwallet(conf *Conf, req *Request, res *Response) error {
   	mutex.Lock()
   	defer mutex.Unlock()
@@ -41,26 +41,26 @@
   	if !ok {
   		return errors.New("invalid seed")
   	}
-  
+
   	log.Println("restoring from a seed...")
   	if seedTrytes, err := gadk.ToTrytes(seed); err == nil {
   		err := RestoreAddressesFromSeed(conf, seedTrytes)
   		if err != nil {
   			log.Printf("Error restoring from the seed: %v\n", err)
-  
+
   			return err
   		}
   		RefreshAccount(conf)
   		log.Println("local database has been restored")
   	} else {
   		log.Printf("Error parsing the seed: %v\n", err)
-  
+
   		return err
   	}
-  
+
   	return nil
   }
-  
+
   func getnewaddress(conf *Conf, req *Request, res *Response) error {
   	mutex.Lock()
   	defer mutex.Unlock()
@@ -80,7 +80,7 @@
   		return errors.New("invalid params")
   	}
   	return db.Update(func(tx *bolt.Tx) error {
-  		ac, err := getAccount(tx, acc)
+      ac, err := getAccount(tx, acc)
   		if err != nil {
   			return err
   		}
@@ -181,7 +181,7 @@
   	default:
   		return errors.New("invalid params")
   	}
-  
+
   	err := db.View(func(tx *bolt.Tx) error {
   		acc, balmap, err := getBalance(conf.api, tx)
   		if err != nil {
@@ -251,7 +251,7 @@
   	res.Result = result
   	return err
   }
-  
+
   type info struct {
   	IsValid      bool    `json:"isvalid"`
   	Address      string  `json:"address"`
@@ -263,7 +263,7 @@
   	IsCompressed *bool   `json:"iscompressed,omitempty"`
   	Account      *string `json:"account,omitempty"`
   }
-  
+
   //only 'isvalid' params is valid, others may be incorrect.
   func validateaddress(conf *Conf, req *Request, res *Response) error {
   	mutex.RLock()
@@ -289,7 +289,7 @@
   		ac, _, err = findAddress(tx, adr)
   		return err
   	})
-  
+
   	infoi := info{
   		IsValid: valid,
   		Address: adrstr,
@@ -308,12 +308,12 @@
   	res.Result = &infoi
   	return nil
   }
-  
+
   func settxfee(conf *Conf, req *Request, res *Response) error {
   	res.Result = true
   	return nil
   }
-  
+
   type details struct {
   	Account   string      `json:"account"`
   	Address   gadk.Trytes `json:"address"`
@@ -323,7 +323,7 @@
   	Fee       float64     `json:"fee"`
   	Abandoned *bool       `json:"abandoned,omitempty"`
   }
-  
+
   type tx struct {
   	Amount            float64     `json:"amount"`
   	Fee               float64     `json:"fee"`
@@ -339,7 +339,7 @@
   	Details           []*details  `json:"details"`
   	Hex               string      `json:"hex"`
   }
-  
+
   func gettransaction(conf *Conf, req *Request, res *Response) error {
   	mutex.RLock()
   	defer mutex.RUnlock()
@@ -358,17 +358,17 @@
   	default:
   		return errors.New("invalid params")
   	}
-  
+
   	var amount int64
   	nconf := 0
   	var dt *transaction
   	var detailss []*details
   	bundle := gadk.Trytes(bundlestr)
   	var allConfirmed bool = true
-  
+
     // check inclusion state (live mesh lookup)
     var hashes_to_check []gadk.Trytes
-  
+
   	err_check := db.View(func(tx *bolt.Tx) error {
   		trs, hs, err := findTX(tx, bundle)
   		if err != nil {
@@ -390,7 +390,7 @@
   	if err_check != nil {
   		return err_check
   	}
-  
+
   	err := db.View(func(tx *bolt.Tx) error {
   		trs, hs, err := findTX(tx, bundle)
   		if err != nil {
@@ -401,7 +401,7 @@
   		}
   		detailss = make([]*details, 0, len(trs))
   		indice := make(map[int64]struct{})
-  
+
   		// found some unconfirmed, so perform mesh lookup and DB Update
   		if !allConfirmed {
   			//get newly added and newly confirmed trytes direclty from mesh
@@ -421,7 +421,7 @@
   				}
   			}
   		}
-  
+
   		for i, tr := range trs {
   			dt2, errr := getTransaction(tx, conf, tr, hs[i].Confirmed)
   			if errr != nil {
@@ -465,7 +465,7 @@
   	}
   	return nil
   }
-  
+
   type transaction struct {
   	Account  *string     `json:"account"`
   	Address  gadk.Trytes `json:"address"`
@@ -490,7 +490,7 @@
   	BIP125Replaceable string `json:"bip125-replaceable"`
   	Abandoned         *bool  `json:"abandoned,omitempty"`
   }
-  
+
   //do not support over 1000 txs.
   func listtransactions(conf *Conf, req *Request, res *Response) error {
   	mutex.RLock()
@@ -572,7 +572,7 @@
   	res.Result = ltx
   	return err
   }
-  
+
   func getTransaction(tx *bolt.Tx, conf *Conf, tr *gadk.Transaction, inc bool) (*transaction, error) {
   	ac, _, errr := findAddress(tx, tr.Address)
   	if errr != nil {
@@ -609,4 +609,3 @@
   	}
   	return dt, nil
   }
-  
