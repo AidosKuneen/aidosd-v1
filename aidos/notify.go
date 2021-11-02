@@ -134,9 +134,10 @@
 
 		var extras []gadk.Trytes
     cntchunk := 0
+		
 		for len(adrs) > 50 { // need to break it into 10 chunks
 			  cntchunk ++
-			  log.Println("more than 500 addresses. Processing chunk",cntchunk,"of 50")
+			  log.Println("more than 50 addresses(",len(adrs),"). Processing chunk",cntchunk)
 				adrs_500 := adrs[0:50]
 				adrs = adrs[50:]
 
@@ -160,12 +161,14 @@
   	if err != nil {
   		return nil, err
   	}
-  	if len(r.Hashes) == 0 {
+		extras = append(extras,r.Hashes ...)
+		if len(extras) == 0 {
   		log.Println("no tx for addresses in wallet")
   		return nil, nil
   	}
+		log.Println("Checking transactions: ",len(extras))
   	//get newly added and newly confirmed trytes.
-  	news, confirmed, err := compareHashes(conf.api, r.Hashes)
+  	news, confirmed, err := compareHashes(conf.api, extras)
   	if err != nil {
   		return nil, err
   	}
