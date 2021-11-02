@@ -246,7 +246,7 @@ func runParent(passwd []byte, oargs ...string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	time.Sleep(3 * time.Second)
+	time.Sleep(6 * time.Second)
 
 	return call("Control.Start", &passwd, &struct{}{})
 }
