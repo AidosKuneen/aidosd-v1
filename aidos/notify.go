@@ -77,20 +77,38 @@
   	if err2 != nil {
   		return nil, nil, err2
   	}
-  	for _, h := range hs {
+		var checkConfirmationTX []*txstate
+		var checkConfirmationTXHashes []gadk.Trytes
+		var checkHSindexOf []int
+  	for idx, h := range hs {
   		if h.Confirmed {
   			continue
   		}
-  		inc, err := api.GetInclusionStates([]gadk.Trytes{h.Hash}, []gadk.Trytes{ni.LatestMilestone})
-  		if err != nil {
-  			log.Println(err)
-  			continue
-  		}
-  		if len(inc.States) > 0 && inc.States[0] {
-  			confirmed = append(confirmed, h.Hash)
-  			h.Confirmed = true
-  		}
+			checkConfirmationTX = append(checkConfirmationTX,h)
+			checkConfirmationTXHashes = append(checkConfirmationTXHashes, h.Hash)
+			checkHSindexOf = append(checkHSindexOf, idx)
   	}
+		// bulk processing
+		new_confirmed := 0
+		inc, err := api.GetInclusionStates(checkConfirmationTXHashes, []gadk.Trytes{ni.LatestMilestone})
+		if err != nil {
+			log.Println(err)
+		}
+		if len(inc.States) == len(checkConfirmationTXHashes) {
+			for ix, stateConfirmed := range inc.States {
+				if stateConfirmed {
+						confirmed = append(confirmed, checkConfirmationTXHashes[ix])
+						if (checkConfirmationTX[ix].Hash ==  hs[checkHSindexOf[ix]].Hash){
+							hs[checkHSindexOf[ix]].Confirmed = true
+							new_confirmed++
+						} else {
+							 log.Println("assert error: checkConfirmationTX[ix].Hash ==  hs[checkHSindexOf[ix]].Hash?")
+						}
+				}
+		  }
+		}	else {
+		   log.Println("checkConfirmationTXHashes missmatch. node reachable?")
+		}
 
   	err = db.Update(func(tx *bolt.Tx) error {
   		return putHashes(tx, hs)
@@ -103,6 +121,7 @@
   	for i := range news {
   		ret[i] = news[i].Hash
   	}
+		log.Println("Confirmed:",new_confirmed)
   	return ret, confirmed, nil
   }
 
