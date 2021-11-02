@@ -1,15 +1,15 @@
   // Copyright (c) 2017 Aidos Developer
-  
+
   // Permission is hereby granted, free of charge, to any person obtaining a copy
   // of this software and associated documentation files (the "Software"), to deal
   // in the Software without restriction, including without limitation the rights
   // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   // copies of the Software, and to permit persons to whom the Software is
   // furnished to do so, subject to the following conditions:
-  
+
   // The above copyright notice and this permission notice shall be included in
   // all copies or substantial portions of the Software.
-  
+
   // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -17,9 +17,9 @@
   // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   // THE SOFTWARE.
-  
+
   package main
-  
+
   import (
   	"bytes"
   	"flag"
@@ -37,17 +37,17 @@
   	"syscall"
   	"time"
   )
-  
+
   const (
   	stopping = byte(iota)
   	working
-  
+
   	controlURL = "127.0.0.1:33631"
   )
-  
+
   //Version is aidosd's version. It should be overwritten when building on CI.
   var Version = "unstable"
-  
+
   func main() {
   	aidos.SetLog(false)
   	flag.Usage = func() {
@@ -63,7 +63,7 @@
   	flag.BoolVar(&refresh, "refresh", false, "refresh the DB (danger!)")
   	flag.BoolVar(&showSeed, "show_seed", false, "show the seed")
   	flag.Parse()
-  
+
   	if flag.NFlag() > 1 || flag.NArg() > 0 {
   		flag.Usage()
   		return
@@ -71,7 +71,7 @@
   	if flag.NFlag() == 0 {
   		start = true
   	}
-  
+
   	if child {
   		if err := runChild(); err != nil {
   			panic(err)
@@ -115,7 +115,7 @@
   	}
   	if refresh {
   		aidos.SetLog(true)
-  
+
   		pwd := getPasswd()
   		conf, err := aidos.Prepare("aidosd.conf", pwd)
   		if err != nil {
@@ -137,32 +137,32 @@
   		}
   	}
   }
-  
+
   func callStatus() (byte, error) {
   	var stat byte
   	err := call("Control.Status", &struct{}{}, &stat)
   	return stat, err
   }
-  
+
   func callStop() error {
   	return call("Control.Stop", &struct{}{}, &struct{}{})
   }
-  
+
   //Control is a struct for controlling child.
   type Control struct {
   	status byte
   }
-  
+
   //Start starts aidosd with password.
   func (c *Control) Start(r *http.Request, args *[]byte, reply *struct{}) error {
   	conf, err := aidos.Prepare("aidosd.conf", *args)
   	if err != nil {
   		return err
   	}
-  
+
   	// check for multiple accounts:
     aidos.ListAndSelectAccount(conf);
-  
+
   	go func() {
   		for {
   			if _, err := aidos.Walletnotify(conf); err != nil {
@@ -181,7 +181,7 @@
   			}
   		}()
   	}
-  
+
   	if err := aidos.UpdateTXs(conf); err != nil {
   		log.Fatal(err)
   	}
@@ -198,20 +198,20 @@
   	c.status = working
   	return nil
   }
-  
+
   //Stop stops aidosd.
   func (c *Control) Stop(r *http.Request, args *struct{}, reply *struct{}) error {
   	aidos.Exit()
   	c.status = stopping
   	return nil
   }
-  
+
   //Status returns if aidosd is working or stopping.
   func (c *Control) Status(r *http.Request, args *struct{}, reply *byte) error {
   	*reply = c.status
   	return nil
   }
-  
+
   func call(method string, args interface{}, ret interface{}) error {
   	url := "http://" + controlURL + "/control"
   	message, err := json.EncodeClientRequest(method, args)
@@ -233,10 +233,10 @@
   			log.Println(err)
   		}
   	}()
-  
+
   	return json.DecodeClientResponse(resp.Body, ret)
   }
-  
+
   func runParent(passwd []byte, oargs ...string) error {
   	args := []string{"-child"}
   	cmd := exec.Command(oargs[0], args...)
@@ -247,10 +247,10 @@
   		return err
   	}
   	time.Sleep(6 * time.Second)
-  
-  	return call("Control.Start", &passwd, &struct{}{})
+    call("Control.Start", &passwd, &struct{}{})
+  	return nil
   }
-  
+
   func getPasswd() []byte {
   	fmt.Print("Enter password: ")
   	pwd, err := term.ReadPassword(int(syscall.Stdin)) //int conversion is needed for win
@@ -260,24 +260,23 @@
   	}
   	return pwd
   }
-  
+
   func runChild() error {
   	runtime.SetBlockProfileRate(1)
   	go func() {
   		// TODO Remove hardcoded address and port...
   		log.Println(http.ListenAndServe("127.0.0.1:6060", nil))
   	}()
-  
+
   	s := rpc.NewServer()
   	s.RegisterCodec(json.NewCodec(), "application/json")
   	if err := s.RegisterService(new(Control), ""); err != nil {
   		panic(err)
   	}
   	http.Handle("/rpc", s)
-  
+
   	mux := http.NewServeMux()
   	mux.Handle("/control", s)
   	log.Println("started  control server on aidosd...")
   	return http.ListenAndServe(controlURL, mux)
   }
-  
