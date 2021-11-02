@@ -1,15 +1,15 @@
   // Copyright (c) 2017 Aidos Developer
-  
+
   // Permission is hereby granted, free of charge, to any person obtaining a copy
   // of this software and associated documentation files (the "Software"), to deal
   // in the Software without restriction, including without limitation the rights
   // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   // copies of the Software, and to permit persons to whom the Software is
   // furnished to do so, subject to the following conditions:
-  
+
   // The above copyright notice and this permission notice shall be included in
   // all copies or substantial portions of the Software.
-  
+
   // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -17,19 +17,19 @@
   // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   // THE SOFTWARE.
-  
+
   package aidos
-  
+
   import (
   	"log"
   	"os/exec"
   	"strings"
-  
+
   	"github.com/AidosKuneen/gadk"
   	"github.com/boltdb-go/bolt"
   	shellwords "github.com/mattn/go-shellwords"
   )
-  
+
   func compareHashes(api apis, hashes []gadk.Trytes) ([]gadk.Trytes, []gadk.Trytes, error) {
   	var confirmed []gadk.Trytes
   	var hs, news []*txstate
@@ -69,7 +69,7 @@
   	if err != nil {
   		return nil, nil, err
   	}
-  
+
   	//search newly confirmed tx
   	confirmed = make([]gadk.Trytes, 0, len(hs))
   	hs = append(hs, news...)
@@ -91,21 +91,21 @@
   			h.Confirmed = true
   		}
   	}
-  
+
   	err = db.Update(func(tx *bolt.Tx) error {
   		return putHashes(tx, hs)
   	})
   	if err != nil {
   		return nil, nil, err
   	}
-  
+
   	ret := make([]gadk.Trytes, len(news))
   	for i := range news {
   		ret[i] = news[i].Hash
   	}
   	return ret, confirmed, nil
   }
-  
+
   //Walletnotify exec walletnotify scripts when receivng tx and tx is confirmed.
   func Walletnotify(conf *Conf) ([]string, error) {
   	log.Println("starting walletnotify...")
@@ -131,6 +131,28 @@
   		}
   	}
   	//get all trytes for all addresses
+
+		var extras []gadk.Trytes
+    cntchunk := 0
+		for len(adrs) > 501 { // need to break it into 500 chunks
+			  cntchunk ++
+			  log.Println("more than 500 addresses. Processing chunk",cntchunk,"of 500")
+				adrs_500 := adrs[0:500]
+				adrs = adrs[500:]
+
+				ft := gadk.FindTransactionsRequest{
+					Addresses: adrs_500,
+				}
+
+				r, err := conf.api.FindTransactions(&ft)
+				if err != nil {
+					return nil, err
+				}
+				extras = append(extras,r.Hashes ...)
+		}
+
+		// and the remaining ones..
+
   	ft := gadk.FindTransactionsRequest{
   		Addresses: adrs,
   	}
@@ -223,4 +245,3 @@
   	log.Println("end of walletnotify")
   	return result, nil
   }
-  
