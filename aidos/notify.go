@@ -134,11 +134,11 @@
 
 		var extras []gadk.Trytes
     cntchunk := 0
-		for len(adrs) > 501 { // need to break it into 500 chunks
+		for len(adrs) > 50 { // need to break it into 10 chunks
 			  cntchunk ++
-			  log.Println("more than 500 addresses. Processing chunk",cntchunk,"of 500")
-				adrs_500 := adrs[0:500]
-				adrs = adrs[500:]
+			  log.Println("more than 500 addresses. Processing chunk",cntchunk,"of 50")
+				adrs_500 := adrs[0:50]
+				adrs = adrs[50:]
 
 				ft := gadk.FindTransactionsRequest{
 					Addresses: adrs_500,
@@ -146,7 +146,7 @@
 
 				r, err := conf.api.FindTransactions(&ft)
 				if err != nil {
-					return nil, err
+					//return nil, err
 				}
 				extras = append(extras,r.Hashes ...)
 		}
