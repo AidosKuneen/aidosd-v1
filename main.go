@@ -55,13 +55,14 @@
   		fmt.Fprintf(os.Stderr, "%s <options>\n", os.Args[0])
   		flag.PrintDefaults()
   	}
-  	var child, start, status, stop, refresh, showSeed bool
+  	var child, start, status, stop, refresh, showSeed, initialize bool
   	flag.BoolVar(&child, "child", false, "start as child")
   	flag.BoolVar(&start, "start", false, "start aidosd (default behaviour)")
   	flag.BoolVar(&status, "status", false, "show status")
   	flag.BoolVar(&stop, "stop", false, "stop aidosd")
   	flag.BoolVar(&refresh, "refresh", false, "refresh the DB (danger!)")
   	flag.BoolVar(&showSeed, "show_seed", false, "show the seed")
+		flag.BoolVar(&initialize, "initialize", false, "set up a new account (warning! clears any existing account!)")
   	flag.Parse()
 
   	if flag.NFlag() > 1 || flag.NArg() > 0 {
@@ -71,6 +72,17 @@
   	if flag.NFlag() == 0 {
   		start = true
   	}
+
+		if (initialize || !aidos.DBExists()){
+			errInit := aidos.InitializeWallet() // check if wallet is set up, and if not, prompt the user
+
+			if (errInit != nil){
+				log.Fatal(errInit)
+			}
+			fmt.Println("Account initialization complete. You can now start the aidosd saemon wiht the -start parameter")
+			return
+		}
+
 
   	if child {
   		if err := runChild(); err != nil {

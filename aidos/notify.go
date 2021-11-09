@@ -129,7 +129,7 @@
 	var addressCcheckPerformed bool = false
   //Walletnotify exec walletnotify scripts when receivng tx and tx is confirmed.
   func Walletnotify(conf *Conf) ([]string, error) {
-  	log.Println("starting walletnotify...")
+  	log.Println("starting walletnotify... (this may take a while)")
   	bdls := make(map[gadk.Trytes]struct{})
   	var acc []Account
   	var adrs []gadk.Address
