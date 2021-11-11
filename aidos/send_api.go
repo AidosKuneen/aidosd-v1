@@ -40,7 +40,7 @@
   		mwm = 13
   	}
     if conf.V2 {
-  		mwm = 12
+  		mwm = 15
   	}
   	var result gadk.Trytes
   	err := db.Update(func(tx *bolt.Tx) error {
