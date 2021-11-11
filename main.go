@@ -183,16 +183,16 @@
   			time.Sleep(time.Minute)
   		}
   	}()
-  	if !conf.Testnet {
-  		go func() {
-  			for {
-  				if err := aidos.Recast(conf.Node); err != nil {
-  					log.Println(err)
-  				}
-  				time.Sleep(30 * time.Minute)
-  			}
-  		}()
-  	}
+  	// if !conf.Testnet {
+  	// 	go func() {
+  	// 		for {
+  	// 			if err := aidos.Recast(conf.Node); err != nil {
+  	// 				log.Println(err)
+  	// 			}
+  	// 			time.Sleep(30 * time.Minute)
+  	// 		}
+  	// 	}()
+  	// }
 
   	if err := aidos.UpdateTXs(conf); err != nil {
   		log.Fatal(err)
