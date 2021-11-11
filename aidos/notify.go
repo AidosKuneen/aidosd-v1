@@ -126,6 +126,7 @@
   }
 
   var ignoreAddr []gadk.Address
+  var resetIgnoreCounter int = 0
 	var addressCcheckPerformed bool = false
   //Walletnotify exec walletnotify scripts when receivng tx and tx is confirmed.
   func Walletnotify(conf *Conf) ([]string, error) {
@@ -146,6 +147,12 @@
   		log.Println("no address in wallet.")
   		return nil, nil
   	}
+
+    resetIgnoreCounter++
+    if resetIgnoreCounter % 5 == 0 { // try again every 5 mins for all addresses
+      ignoreAddr = nil
+    }
+
   	for _, ac := range acc {
   		for _, b := range ac.Balances {
 				if !contains(ignoreAddr, b.Address){
