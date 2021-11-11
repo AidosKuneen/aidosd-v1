@@ -1,15 +1,15 @@
   // Copyright (c) 2017 Aidos Developer
-  
+
   // Permission is hereby granted, free of charge, to any person obtaining a copy
   // of this software and associated documentation files (the "Software"), to deal
   // in the Software without restriction, including without limitation the rights
   // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   // copies of the Software, and to permit persons to whom the Software is
   // furnished to do so, subject to the following conditions:
-  
+
   // The above copyright notice and this permission notice shall be included in
   // all copies or substantial portions of the Software.
-  
+
   // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -17,27 +17,27 @@
   // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   // THE SOFTWARE.
-  
+
   package aidos
-  
+
   import (
   	"errors"
   	"fmt"
   	"log"
   	"sync"
   	"time"
-  
+
   	"github.com/AidosKuneen/gadk"
   )
-  
+
   /*
   we calulate spending values first without confirmation.
   we will calulcate receiving values(including changes) after confirmation.
   */
-  
+
   func addOutputs(trs []gadk.Transfer) (gadk.Bundle, []gadk.Trytes, int64) {
   	const sigSize = gadk.SignatureMessageFragmentTrinarySize / 3
-  
+
   	var bundle gadk.Bundle
   	var frags []gadk.Trytes
   	var total int64
@@ -54,13 +54,13 @@
   	}
   	return bundle, frags, total
   }
-  
+
   //PrepareTransfers gets an array of transfer objects as input,
   //and then prepare the transfer by generating the correct bundle,
   // as well as choosing and signing the inputs if necessary (if it's a value transfer).
   func PrepareTransfers(api apis, ac *Account, trs []gadk.Transfer) (gadk.Bundle, error) {
   	var err error
-  
+
   	bundle, frags, total := addOutputs(trs)
   	// Get inputs if we are sending tokens
   	if total <= 0 {
@@ -68,7 +68,7 @@
   		bundle.Finalize(frags)
   		return bundle, nil
   	}
-  
+
   	if total > ac.totalValueWithChange() {
   		return nil, errors.New("Not enough balance")
   	}
@@ -83,7 +83,7 @@
   	err = signInputs(ac, bundle)
   	return bundle, err
   }
-  
+
   func addRemainder(api apis, bundle *gadk.Bundle, ac *Account, total int64, useChange bool) (bool, error) {
   	for i, bal := range ac.Balances {
   		value := bal.Value
@@ -127,11 +127,11 @@
   	}
   	return false, nil //balance is not sufficient
   }
-  
+
   func signInputs(ac *Account, bundle gadk.Bundle) error {
   	//  Get the normalized bundle hash
   	nHash := bundle.Hash().Normalize()
-  
+
   	//  SIGNING OF INPUTS
   	//
   	//  Here we do the actual signing of the inputs
@@ -156,7 +156,7 @@
   		key := gadk.NewKey(ac.Seed, index, 2)
   		//  Calculate the new signatureFragment with the first bundle fragment
   		bundle[i].SignatureMessageFragment = gadk.Sign(nHash[:27], key[:6561/3])
-  
+
   		// if user chooses higher than 27-tryte security
   		// for each security level, add an additional signature
   		//  Because the signature is > 2187 trytes, we need to
@@ -171,7 +171,7 @@
   	}
   	return nil
   }
-  
+
   func doPow(tra *gadk.GetTransactionsToApproveResponse, depth int64, trytes []gadk.Transaction, mwm int64, pow gadk.PowFunc) error {
   	var prev gadk.Trytes
   	var err error
@@ -188,10 +188,11 @@
   			return err
   		}
   		prev = trytes[i].Hash()
+      log.Println("PoW complete: ",i,"/",len(trytes))
   	}
   	return nil
   }
-  
+
   //PowTrytes does attachToMesh.
   func PowTrytes(api apis, depth int64, trytes []gadk.Transaction, mwm int64, pow gadk.PowFunc) error {
   	tra, err := api.GetTransactionsToApprove(depth)
@@ -211,7 +212,7 @@
   	}
   	return nil
   }
-  
+
   func broadcast(api apis, trytes []gadk.Transaction) error {
   	// Broadcast and store tx
   	if err := api.StoreTransactions(trytes); err != nil {
@@ -219,7 +220,7 @@
   	}
   	return api.BroadcastTransactions(trytes)
   }
-  
+
   //HasValidNonce checks t's hash has valid MinWeightMagnitude.
   func HasValidNonce(t *gadk.Transaction, mwm int) bool {
   	h := t.Hash()
@@ -230,15 +231,15 @@
   	}
   	return true
   }
-  
+
   var pow gadk.PowFunc
-  
+  var PowInfo string
   func init() {
-  	_, pow = gadk.GetBestPoW()
+  	PowInfo, pow = gadk.GetBestPoW()
   }
-  
+
   var powMutex = sync.Mutex{}
-  
+
   //Send sends token.
   //if you need to pow locally, you must specifiy pow func.
   //otherwirse this calls AttachToMesh API.
@@ -254,7 +255,7 @@
   	go func() {
   		powMutex.Lock()
   		defer powMutex.Unlock()
-  		log.Println("starting PoW...")
+  		log.Println("starting PoW... (",PowInfo,")")
   		ts := []gadk.Transaction(bd)
   		for i := 0; ; i++ {
   			err = PowTrytes(conf.api, gadk.Depth, ts, mwm, pow)
@@ -272,15 +273,16 @@
   				log.Println("finish sending. bundle hash=", bd2.Hash())
   				break
   			}
-  			if _, ok := conf.api.(*gadk.API); ok && !conf.Testnet {
-  				// TODO Remove hardcoded URLs
-  				for _, w := range []string{"http://wallet1.aidoskuneen.com:14266", "http://wallet2.aidoskuneen.com:14266"} {
-  					api2 := gadk.NewAPI(w, nil)
-  					if err := api2.BroadcastTransactions(ts); err != nil {
-  						log.Println(err)
-  					}
-  				}
-  			}
+        // no rebroadcast required
+  			// if _, ok := conf.api.(*gadk.API); ok && !conf.Testnet {
+  			// 	// TODO Remove hardcoded URLs
+  			// 	for _, w := range []string{"http://wallet1.aidoskuneen.com:14266", "http://wallet2.aidoskuneen.com:14266"} {
+  			// 		api2 := gadk.NewAPI(w, nil)
+  			// 		if err := api2.BroadcastTransactions(ts); err != nil {
+  			// 			log.Println(err)
+  			// 		}
+  			// 	}
+  			// }
   			log.Println("failed to send ", bd2)
   			log.Println(err, " waiting 3 minuites ", i)
   			time.Sleep(3 * time.Minute)
@@ -289,4 +291,3 @@
   	}()
   	return hash, nil
   }
-  
