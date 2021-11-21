@@ -1,15 +1,15 @@
   // Copyright (c) 2017 Aidos Developer
-  
+
   // Permission is hereby granted, free of charge, to any person obtaining a copy
   // of this software and associated documentation files (the "Software"), to deal
   // in the Software without restriction, including without limitation the rights
   // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   // copies of the Software, and to permit persons to whom the Software is
   // furnished to do so, subject to the following conditions:
-  
+
   // The above copyright notice and this permission notice shall be included in
   // all copies or substantial portions of the Software.
-  
+
   // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -17,9 +17,9 @@
   // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   // THE SOFTWARE.
-  
+
   package aidos
-  
+
   import (
   	"bytes"
   	"crypto/sha256"
@@ -30,14 +30,17 @@
   	"sync"
   	"time"
   )
-  
+
   var privileged bool
   var pmutex sync.RWMutex
-  
+
   func send(acc string, conf *Conf, trs []gadk.Transfer) (gadk.Trytes, error) {
   	var mwm int64 = 18
   	if conf.Testnet {
   		mwm = 13
+  	}
+    if conf.V2 {
+  		mwm = 15
   	}
   	var result gadk.Trytes
   	err := db.Update(func(tx *bolt.Tx) error {
@@ -72,7 +75,7 @@
   	})
   	return result, err
   }
-  
+
   func sendmany(conf *Conf, req *Request, res *Response) error {
   	pmutex.RLock()
   	if !privileged {
@@ -127,7 +130,7 @@
   	res.Result, err = send(acc, conf, trs)
   	return err
   }
-  
+
   func sendfrom(conf *Conf, req *Request, res *Response) error {
   	var err error
   	pmutex.RLock()
@@ -179,7 +182,7 @@
   	defer mutex.Unlock()
   	var tr gadk.Transfer
   	tr.Tag = gadk.Trytes(conf.Tag)
-  
+
   	data, ok := req.Params.([]interface{})
   	if !ok {
   		return errors.New("invalid params")
@@ -199,12 +202,12 @@
   	if err != nil {
   		return err
   	}
-  
+
   	tr.Value = int64(value * 100000000)
   	res.Result, err = send("*", conf, []gadk.Transfer{tr})
   	return err
   }
-  
+
   func walletpassphrase(conf *Conf, req *Request, res *Response) error {
   	pmutex.RLock()
   	if privileged {
@@ -242,4 +245,3 @@
   	}()
   	return nil
   }
-  

@@ -1,15 +1,15 @@
   // Copyright (c) 2017 Aidos Developer
-  
+
   // Permission is hereby granted, free of charge, to any person obtaining a copy
   // of this software and associated documentation files (the "Software"), to deal
   // in the Software without restriction, including without limitation the rights
   // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   // copies of the Software, and to permit persons to whom the Software is
   // furnished to do so, subject to the following conditions:
-  
+
   // The above copyright notice and this permission notice shall be included in
   // all copies or substantial portions of the Software.
-  
+
   // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -17,9 +17,9 @@
   // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   // THE SOFTWARE.
-  
+
   package aidos
-  
+
   import (
   	"encoding/json"
   	"errors"
@@ -36,14 +36,14 @@
   	"sync"
   	"syscall"
   	"time"
-  
+
   	"github.com/AidosKuneen/gadk"
   	"github.com/boltdb-go/bolt"
   	"github.com/natefinch/lumberjack"
   )
-  
+
   var db *bolt.DB
-  
+
   type apis interface {
   	FindTransactions(ft *gadk.FindTransactionsRequest) (*gadk.FindTransactionsResponse, error)
   	GetTrytes(hashes []gadk.Trytes) (*gadk.GetTrytesResponse, error)
@@ -54,9 +54,9 @@
   	GetNodeInfo() (*gadk.GetNodeInfoResponse, error)
   	GetInclusionStates([]gadk.Trytes, []gadk.Trytes) (*gadk.GetInclusionStatesResponse, error)
   }
-  
+
   var mutex sync.RWMutex
-  
+
   //Conf is configuration for aidosd.
   type Conf struct {
   	RPCUser     string
@@ -69,16 +69,18 @@
   	Tag         string
   	api         apis
   	accountNo   int
+    V2          bool
   }
-  
+
   //ParseConf parses conf file.
   func ParseConf(cfile string) *Conf {
   	conf := Conf{
   		RPCPort:    "8332",
   		PassPhrase: true,
   		accountNo: -1,
+      V2: false,
   	}
-  
+
   	f, err := os.Open(cfile)
   	if err != nil {
   		panic(err)
@@ -120,7 +122,7 @@
   			conf.Notify = states[1]
   		case "aidos_node":
   			conf.Node = states[1]
-  		case "testnet":
+      case "testnet":
   			switch states[1] {
   			case "true":
   				conf.Testnet = true
@@ -129,6 +131,24 @@
   			default:
   				panic("testnet must be true or false")
   			}
+      case "V2":
+  			switch states[1] {
+  			case "true":
+  				conf.V2 = true
+  			case "false":
+  				//do nothing, it's default
+  			default:
+  				panic("V2 must be true or false")
+  			}
+      case "v2":
+  			switch states[1] {
+  			case "true":
+  				conf.V2 = true
+  			case "false":
+  				//do nothing, it's default
+  			default:
+  				panic("V2 must be true or false")
+  		}
   		case "passphrase":
   			switch states[1] {
   			case "true":
@@ -149,7 +169,7 @@
   				panic("tag is too long, must be under 20 characters.")
   			}
   			conf.Tag = states[1]
-  
+
   		default:
   			log.Println(states[0] + " is ignored.")
   		}
@@ -161,7 +181,7 @@
   	conf.api = gadk.NewAPI(conf.Node, nil)
   	return &conf
   }
-  
+
   //SetLog does log settings.
   func SetLog(verbose bool) {
   	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
@@ -179,7 +199,7 @@
   		log.SetOutput(l)
   	}
   }
-  
+
   //SetDB setup db.
   func setDB() {
   	var err error
@@ -194,7 +214,7 @@
   		Exit()
   	}()
   }
-  
+
   //Exit flushs DB and exit.
   func Exit() {
   	fmt.Println("exiting...")
@@ -206,7 +226,7 @@
   		os.Exit(1)
   	}()
   }
-  
+
   //Request is for parsing request from client.
   type Request struct {
   	JSONRPC string      `json:"jsonrpc"`
@@ -214,20 +234,20 @@
   	Method  string      `json:"method"`
   	Params  interface{} `json:"params"`
   }
-  
+
   //Err represents error struct for response.
   type Err struct {
   	Code    int64  `json:"code"`
   	Message string `json:"message"`
   }
-  
+
   //Response is for respoding to clinete in jsonrpc.
   type Response struct {
   	Result interface{} `json:"result"`
   	Error  *Err        `json:"error"`
   	ID     interface{} `json:"id"`
   }
-  
+
   func isValidAuth(r *http.Request, conf *Conf) bool {
   	username, password, ok := r.BasicAuth()
   	if !ok {
@@ -235,7 +255,7 @@
   	}
   	return username == conf.RPCUser && password == conf.RPCPassword
   }
-  
+
   //Handle handles api calls.
   func Handle(conf *Conf, w http.ResponseWriter, r *http.Request) {
   	defer func() {
@@ -307,21 +327,21 @@
   		panic(err)
   	}
   }
-  
+
   //Prepare prepares aidosd.
   func Prepare(cfile string, passwd []byte) (*Conf, error) {
   	setDB()
-  
+
   	if err := password(passwd); err != nil {
   		fmt.Println(err)
   		Exit()
   		return nil, err
   	}
   	conf := ParseConf(cfile)
-  
+
   	return conf, nil
   }
-  
+
   //ShowSeed shows seeds for all accounts.
   func ShowSeed() error {
   	return db.View(func(tx *bolt.Tx) error {
@@ -335,4 +355,3 @@
   		return nil
   	})
   }
-  
